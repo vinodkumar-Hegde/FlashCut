@@ -1,18 +1,15 @@
-import json
 import uuid
-from datetime import datetime, timezone
 
-from botocore.exceptions import ClientError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.errors import AppError
-from app.models.render import RenderJob
-from app.providers.aws import (
-    s3_client,
-    sqs_client,
+from app.models.render import (
+    RenderJob,
+    RenderOutbox,
 )
+from app.providers.aws import s3_client
 from app.repositories.render_repository import (
     RenderRepository,
 )
@@ -22,12 +19,6 @@ from app.repositories.selection_repository import (
 from app.repositories.video_repository import (
     VideoRepository,
 )
-
-
-def utcnow():
-    return datetime.now(
-        timezone.utc
-    )
 
 
 class RenderService:
@@ -54,7 +45,6 @@ class RenderService:
             )
         )
 
-        self.sqs = sqs_client()
         self.s3 = s3_client()
 
     def create(
@@ -159,9 +149,7 @@ class RenderService:
 
         existing = (
             self.repo.find_reusable(
-                selection_id=(
-                    selection.id
-                ),
+                selection_id=selection.id,
                 profile=profile,
             )
         )
@@ -176,28 +164,28 @@ class RenderService:
         job = RenderJob(
             id=str(uuid.uuid4()),
             video_id=video.id,
-            selection_id=(
-                selection.id
-            ),
+            selection_id=selection.id,
             source_etag=(
                 selection.source_etag
             ),
             status="queued",
-            render_profile_version=(
-                profile
-            ),
-            selected_seconds=(
-                round(
-                    selected_seconds,
-                    3,
-                )
+            render_profile_version=profile,
+            selected_seconds=round(
+                selected_seconds,
+                3,
             ),
             attempt_count=0,
         )
 
-        self.db.add(
-            job
+        outbox = RenderOutbox(
+            id=str(uuid.uuid4()),
+            render_id=job.id,
+            status="pending",
+            attempt_count=0,
         )
+
+        self.db.add(job)
+        self.db.add(outbox)
 
         try:
             self.db.commit()
@@ -224,40 +212,6 @@ class RenderService:
             raise
 
         self.db.refresh(job)
-
-        try:
-            self.sqs.send_message(
-                QueueUrl=(
-                    self.settings
-                    .render_queue_url
-                ),
-                MessageBody=json.dumps({
-                    "version": 1,
-                    "render_id": job.id,
-                }),
-            )
-
-        except ClientError as exc:
-            job.status = "failed"
-            job.error_code = (
-                "QUEUE_PUBLISH_FAILED"
-            )
-            job.error_message = (
-                "Render job could not "
-                "be queued."
-            )
-            job.completed_at = utcnow()
-
-            self.db.commit()
-
-            raise AppError(
-                503,
-                "RENDER_QUEUE_UNAVAILABLE",
-                (
-                    "The render queue is "
-                    "temporarily unavailable."
-                ),
-            ) from exc
 
         return (
             job,

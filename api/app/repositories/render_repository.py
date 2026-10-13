@@ -1,7 +1,12 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.render import RenderJob
+from app.models.render import (
+    RenderJob,
+    RenderOutbox,
+)
 
 
 class RenderRepository:
@@ -49,4 +54,50 @@ class RenderRepository:
 
         return self.db.scalar(
             statement
+        )
+
+    def lock_job(
+        self,
+        render_id: str,
+    ) -> RenderJob | None:
+        statement = (
+            select(RenderJob)
+            .where(
+                RenderJob.id
+                == render_id
+            )
+            .with_for_update()
+        )
+
+        return self.db.scalar(
+            statement
+        )
+
+    def pending_outbox(
+        self,
+        *,
+        now: datetime,
+        limit: int = 10,
+    ) -> list[RenderOutbox]:
+        statement = (
+            select(RenderOutbox)
+            .where(
+                RenderOutbox.status
+                == "pending",
+                RenderOutbox.next_attempt_at
+                <= now,
+            )
+            .order_by(
+                RenderOutbox.created_at
+            )
+            .with_for_update(
+                skip_locked=True
+            )
+            .limit(limit)
+        )
+
+        return list(
+            self.db.scalars(
+                statement
+            )
         )

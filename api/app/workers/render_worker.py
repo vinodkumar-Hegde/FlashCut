@@ -4,9 +4,16 @@ import os
 import re
 import shutil
 import tempfile
-import time
-from datetime import datetime, timezone
-from pathlib import Path, PurePosixPath
+import threading
+from datetime import (
+    datetime,
+    timedelta,
+    timezone,
+)
+from pathlib import (
+    Path,
+    PurePosixPath,
+)
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -80,13 +87,126 @@ def safe_filename(
     )
 
 
+def dispatch_pending_messages():
+    now = utcnow()
+
+    with SessionLocal() as db:
+        repo = RenderRepository(
+            db
+        )
+
+        pending = repo.pending_outbox(
+            now=now,
+            limit=10,
+        )
+
+        if not pending:
+            return
+
+        for item in pending:
+            try:
+                sqs.send_message(
+                    QueueUrl=(
+                        settings
+                        .render_queue_url
+                    ),
+                    MessageBody=json.dumps({
+                        "version": 1,
+                        "render_id":
+                            item.render_id,
+                    }),
+                )
+
+            except Exception as exc:
+                item.attempt_count += 1
+
+                item.last_error = (
+                    f"{type(exc).__name__}: "
+                    f"{str(exc)}"
+                )[:2000]
+
+                if (
+                    item.attempt_count
+                    >= settings
+                    .render_queue_publish_max_attempts
+                ):
+                    item.status = "failed"
+                    item.next_attempt_at = None
+
+                    job = repo.get(
+                        item.render_id
+                    )
+
+                    if (
+                        job is not None
+                        and job.status
+                        == "queued"
+                    ):
+                        job.status = "failed"
+                        job.error_code = (
+                            "QUEUE_PUBLISH_FAILED"
+                        )
+                        job.error_message = (
+                            "Render job could not "
+                            "be queued."
+                        )
+                        job.completed_at = utcnow()
+
+                    logger.error(
+                        "Render queue publish "
+                        "permanently failed: %s",
+                        item.render_id,
+                    )
+
+                else:
+                    delay_seconds = min(
+                        300,
+                        5 * (
+                            2 ** min(
+                                item.attempt_count,
+                                6,
+                            )
+                        ),
+                    )
+
+                    item.next_attempt_at = (
+                        utcnow()
+                        + timedelta(
+                            seconds=delay_seconds
+                        )
+                    )
+
+                    logger.warning(
+                        "Render queue publish "
+                        "failed; retry scheduled: %s",
+                        item.render_id,
+                    )
+
+            else:
+                item.status = "sent"
+                item.attempt_count += 1
+                item.last_error = None
+                item.next_attempt_at = None
+                item.sent_at = utcnow()
+
+                logger.info(
+                    "Render queued: %s",
+                    item.render_id,
+                )
+
+        db.commit()
+
+
 def claim(
     render_id: str,
 ):
     with SessionLocal() as db:
-        job = (
-            RenderRepository(db)
-            .get(render_id)
+        repo = RenderRepository(
+            db
+        )
+
+        job = repo.lock_job(
+            render_id
         )
 
         if job is None:
@@ -110,26 +230,138 @@ def claim(
                     - heartbeat
                 ).total_seconds()
 
-                if age < 600:
+                if (
+                    age
+                    < settings
+                    .render_stale_after_seconds
+                ):
                     return "busy", None
 
         job.status = "processing"
+
         job.started_at = (
             job.started_at
             or utcnow()
         )
+
         job.heartbeat_at = utcnow()
         job.attempt_count += 1
         job.error_code = None
         job.error_message = None
 
         db.commit()
-        db.refresh(job)
 
         return (
             "claimed",
             job.attempt_count,
         )
+
+
+class MessageLease:
+    def __init__(
+        self,
+        *,
+        receipt_handle: str,
+        render_id: str,
+    ):
+        self.receipt_handle = (
+            receipt_handle
+        )
+
+        self.render_id = render_id
+
+        self.stop_event = (
+            threading.Event()
+        )
+
+        self.thread = threading.Thread(
+            target=self._run,
+            name=(
+                "render-lease-"
+                + render_id
+            ),
+            daemon=True,
+        )
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+        self.stop_event.set()
+
+        self.thread.join(
+            timeout=5
+        )
+
+    def _run(self):
+        interval = max(
+            10,
+            min(
+                settings
+                .render_heartbeat_interval_seconds,
+                settings
+                .render_visibility_timeout_seconds
+                // 3,
+            ),
+        )
+
+        while not self.stop_event.wait(
+            interval
+        ):
+            try:
+                sqs.change_message_visibility(
+                    QueueUrl=(
+                        settings
+                        .render_queue_url
+                    ),
+                    ReceiptHandle=(
+                        self.receipt_handle
+                    ),
+                    VisibilityTimeout=(
+                        settings
+                        .render_visibility_timeout_seconds
+                    ),
+                )
+
+            except Exception:
+                logger.exception(
+                    "Could not extend SQS lease "
+                    "for render %s",
+                    self.render_id,
+                )
+
+            try:
+                with SessionLocal() as db:
+                    job = (
+                        RenderRepository(db)
+                        .get(
+                            self.render_id
+                        )
+                    )
+
+                    if (
+                        job is not None
+                        and job.status
+                        == "processing"
+                    ):
+                        job.heartbeat_at = (
+                            utcnow()
+                        )
+
+                        db.commit()
+
+            except Exception:
+                logger.exception(
+                    "Could not update render "
+                    "heartbeat %s",
+                    self.render_id,
+                )
 
 
 def mark_failure(
@@ -151,9 +383,7 @@ def mark_failure(
             job.error_code = (
                 "RENDER_FAILED"
             )
-            job.completed_at = (
-                utcnow()
-            )
+            job.completed_at = utcnow()
 
         else:
             job.status = "queued"
@@ -218,6 +448,7 @@ def process(
 
         source_key = video.s3_key
         source_name = video.filename
+
         clips = list(
             selection.resolved_clips
         )
@@ -290,9 +521,6 @@ def process(
             source_path=source_path,
             output_path=output_path,
             clips=clips,
-            watermark=(
-                settings.watermark_text
-            ),
             timeout_seconds=(
                 settings
                 .render_ffmpeg_timeout_seconds
@@ -361,6 +589,7 @@ def process(
         job.container_format = (
             container_format
         )
+
         job.error_code = None
         job.error_message = None
         job.heartbeat_at = utcnow()
@@ -375,13 +604,24 @@ def run():
     )
 
     while True:
+        try:
+            dispatch_pending_messages()
+
+        except Exception:
+            logger.exception(
+                "Render outbox dispatch failed"
+            )
+
         response = sqs.receive_message(
             QueueUrl=(
                 settings.render_queue_url
             ),
             MaxNumberOfMessages=1,
             WaitTimeSeconds=20,
-            VisibilityTimeout=180,
+            VisibilityTimeout=(
+                settings
+                .render_visibility_timeout_seconds
+            ),
             AttributeNames=[
                 "ApproximateReceiveCount"
             ],
@@ -467,9 +707,13 @@ def run():
         )
 
         try:
-            process(
-                render_id
-            )
+            with MessageLease(
+                receipt_handle=receipt,
+                render_id=render_id,
+            ):
+                process(
+                    render_id
+                )
 
         except Exception:
             logger.exception(

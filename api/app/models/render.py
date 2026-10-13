@@ -30,9 +30,7 @@ class RenderJob(Base):
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
-        default=lambda: str(
-            uuid.uuid4()
-        ),
+        default=lambda: str(uuid.uuid4()),
     )
 
     video_id: Mapped[str] = mapped_column(
@@ -137,6 +135,67 @@ class RenderJob(Base):
     )
 
     completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+
+class RenderOutbox(Base):
+    __tablename__ = "render_outbox"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+
+    render_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey(
+            "render_jobs.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        unique=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="pending",
+    )
+
+    attempt_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    next_attempt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=utcnow,
+    )
+
+    last_error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+    sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )

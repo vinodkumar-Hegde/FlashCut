@@ -4,12 +4,6 @@ import subprocess
 from pathlib import Path
 
 
-FONT_FILE = (
-    "/usr/share/fonts/truetype/"
-    "dejavu/DejaVuSans-Bold.ttf"
-)
-
-
 def has_audio(
     source_path: Path,
 ) -> bool:
@@ -37,21 +31,7 @@ def has_audio(
     )
 
     return bool(
-        payload.get(
-            "streams"
-        )
-    )
-
-
-def escape_drawtext(
-    value: str,
-) -> str:
-    return (
-        value
-        .replace("\\", "\\\\")
-        .replace(":", "\\:")
-        .replace("'", "\\'")
-        .replace("%", "\\%")
+        payload.get("streams")
     )
 
 
@@ -60,7 +40,6 @@ def render_video(
     source_path: Path,
     output_path: Path,
     clips: list[dict],
-    watermark: str,
     timeout_seconds: int,
 ):
     if not clips:
@@ -133,7 +112,7 @@ def render_video(
                 )
                 + f"concat=n={len(clips)}:"
                 + "v=1:a=1"
-                + "[vcat][acat]"
+                + "[vout][aout]"
             )
         )
 
@@ -145,29 +124,9 @@ def render_video(
                 )
                 + f"concat=n={len(clips)}:"
                 + "v=1:a=0"
-                + "[vcat]"
+                + "[vout]"
             )
         )
-
-    text = escape_drawtext(
-        watermark
-    )
-
-    filters.append(
-        (
-            "[vcat]"
-            "drawtext="
-            f"fontfile={FONT_FILE}:"
-            f"text='{text}':"
-            "x=w-tw-24:"
-            "y=h-th-24:"
-            "fontsize=28:"
-            "fontcolor=white:"
-            "box=1:"
-            "boxcolor=black@0.55"
-            "[vout]"
-        )
-    )
 
     command = [
         "ffmpeg",
@@ -186,7 +145,7 @@ def render_video(
     if audio:
         command.extend([
             "-map",
-            "[acat]",
+            "[aout]",
         ])
 
     suffix = (

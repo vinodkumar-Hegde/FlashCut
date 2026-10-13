@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     render_max_clips: int = 500
     render_max_total_seconds: int = 7200
     render_ffmpeg_timeout_seconds: int = 3600
+
+    render_visibility_timeout_seconds: int = 300
+    render_heartbeat_interval_seconds: int = 60
+    render_stale_after_seconds: int = 600
+    render_queue_publish_max_attempts: int = 20
+
     local_output_dir: str | None = None
 
     auth_disabled: bool = False

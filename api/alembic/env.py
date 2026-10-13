@@ -13,9 +13,15 @@ from app.models.transcription import (
 )
 from app.models.summary import SummaryJob
 from app.models.selection import Selection
-from app.models.render import RenderJob
+from app.models.render import (
+    RenderJob,
+    RenderOutbox,
+)
 from app.models.selection import Selection
-from app.models.render import RenderJob
+from app.models.render import (
+    RenderJob,
+    RenderOutbox,
+)
 
 
 config = context.config

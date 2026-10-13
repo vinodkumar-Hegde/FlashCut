@@ -1,17 +1,31 @@
 import json
 import logging
+import sys
+import traceback
 from datetime import datetime, timezone
 
 
-class JsonFormatter(logging.Formatter):
-    def format(self, record):
+class JsonFormatter(
+    logging.Formatter
+):
+    def format(
+        self,
+        record: logging.LogRecord,
+    ) -> str:
         payload = {
-            "timestamp": datetime.now(
-                timezone.utc
-            ).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
+            "timestamp":
+                datetime.now(
+                    timezone.utc
+                ).isoformat(),
+
+            "level":
+                record.levelname,
+
+            "logger":
+                record.name,
+
+            "message":
+                record.getMessage(),
         }
 
         request_id = getattr(
@@ -21,7 +35,18 @@ class JsonFormatter(logging.Formatter):
         )
 
         if request_id:
-            payload["request_id"] = request_id
+            payload[
+                "request_id"
+            ] = request_id
+
+        if record.exc_info:
+            payload[
+                "exception"
+            ] = "".join(
+                traceback.format_exception(
+                    *record.exc_info
+                )
+            ).strip()
 
         return json.dumps(
             payload,
@@ -30,12 +55,22 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging():
-    handler = logging.StreamHandler()
+    root = logging.getLogger()
+
+    root.handlers.clear()
+
+    handler = logging.StreamHandler(
+        sys.stdout
+    )
+
     handler.setFormatter(
         JsonFormatter()
     )
 
-    root = logging.getLogger()
-    root.handlers.clear()
-    root.addHandler(handler)
-    root.setLevel(logging.INFO)
+    root.addHandler(
+        handler
+    )
+
+    root.setLevel(
+        logging.INFO
+    )
