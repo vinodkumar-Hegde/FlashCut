@@ -1,0 +1,10 @@
+.git
+.gitignore
+.DS_Store
+__pycache__
+*.pyc
+*.pyo
+.venv
+generated
+prototype.db-shm
+prototype.db-wal

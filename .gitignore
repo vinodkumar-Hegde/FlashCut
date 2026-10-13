@@ -61,3 +61,5 @@ build/
 # Local review artifacts
 api-review.txt
 *-code-review.tar.gz
+
+/legacy/

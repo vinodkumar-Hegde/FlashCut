@@ -1,24 +1,17 @@
 # DT-FlashCut Web
 
-Independent browser application for DT-FlashCut.
+Production browser application for DT-FlashCut.
 
-The web application consumes the DT-FlashCut REST API.
+The browser uses the versioned DT-FlashCut REST API through the Nginx `/api/` reverse proxy.
 
-Production API contract:
+Local full application:
 
-- GET /api/v1/videos
-- POST /api/v1/transcriptions
-- GET /api/v1/transcriptions/{job_id}
-- GET /api/v1/videos/{video_id}/transcript
-- GET /api/v1/videos/{video_id}/transcript/words
-- POST /api/v1/summaries
-- GET /api/v1/summaries/{summary_id}
-- POST /api/v1/selections
-- PUT /api/v1/selections/{selection_id}
-- POST /api/v1/selections/{selection_id}/approve
-- POST /api/v1/renders
-- GET /api/v1/renders/{render_id}
-- GET /api/v1/renders/{render_id}/result
+http://127.0.0.1:8080
 
-The browser must never submit arbitrary timestamps for rendering.
-Selections are represented using server-owned transcript segment and word IDs.
+Independent API:
+
+http://127.0.0.1:5002
+
+Swagger:
+
+http://127.0.0.1:5002/docs

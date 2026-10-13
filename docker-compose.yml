@@ -1,0 +1,48 @@
+services:
+
+  production-postgres:
+    extends:
+      file: docker-compose.api.yml
+      service: production-postgres
+
+  production-api:
+    extends:
+      file: docker-compose.api.yml
+      service: production-api
+
+  production-summary-worker:
+    extends:
+      file: docker-compose.api.yml
+      service: production-summary-worker
+
+  production-render-worker:
+    extends:
+      file: docker-compose.api.yml
+      service: production-render-worker
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+
+    container_name: flashcut-web
+
+    ports:
+      - "8080:80"
+
+    depends_on:
+      production-api:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O - http://127.0.0.1/healthz || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+    restart: unless-stopped
+
+volumes:
+  flashcut_prod_postgres:
