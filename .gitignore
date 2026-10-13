@@ -1,0 +1,63 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated media
+var/
+generated/
+generated-prod/
+*.mp4
+*.webm
+
+# Evaluation output
+evaluation/exports/
+legacy/evaluation/exports/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Temporary files
+/tmp/
+tmp/
+
+# AWS
+.aws/
+
+# Build
+dist/
+build/
+
+# macOS metadata
+._*
+.AppleDouble
+.LSOverride
+
+# Historical manual backups
+*.before-*
+*.backup
+*.bak
+*.old
+*.orig
+*~
+
+# Local review artifacts
+api-review.txt
+*-code-review.tar.gz

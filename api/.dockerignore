@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.db
+.env
+.git
+.gitignore
+tests
+._*
+.DS_Store
+*.before-*
+*.backup
+*.bak
+*.old
+*.orig
+*~

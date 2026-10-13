@@ -1,0 +1,157 @@
+services:
+
+  production-postgres:
+    image: postgres:17
+    container_name: flashcut-postgres
+
+    environment:
+      POSTGRES_DB: doctutorials
+      POSTGRES_USER: doctutorials
+      POSTGRES_PASSWORD: doctutorials-local
+
+    volumes:
+      - flashcut_prod_postgres:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U doctutorials -d doctutorials
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    restart: unless-stopped
+
+
+  production-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+
+    container_name: flashcut-api
+
+    user: "0:0"
+
+    ports:
+      - "5002:5001"
+
+    env_file:
+      - .env
+
+    environment:
+      APP_ENV: local
+      APP_VERSION: 1.0.0
+      AUTH_DISABLED: "true"
+
+      DATABASE_URL: postgresql+psycopg://doctutorials:doctutorials-local@production-postgres:5432/doctutorials
+
+      AWS_PROFILE: dev
+      AWS_CONFIG_FILE: /root/.aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /root/.aws/credentials
+
+    volumes:
+      - ${HOME}/.aws:/root/.aws
+
+    depends_on:
+      production-postgres:
+        condition: service_healthy
+
+    command:
+      - sh
+      - -c
+      - >
+        alembic -c /app/alembic.ini upgrade head &&
+        exec uvicorn app.main:app
+        --host 0.0.0.0
+        --port 5001
+
+    restart: unless-stopped
+
+
+  production-summary-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+
+    container_name: flashcut-summary-worker
+
+    user: "0:0"
+
+    env_file:
+      - .env
+
+    environment:
+      APP_ENV: local
+      APP_VERSION: 1.0.0
+      AUTH_DISABLED: "true"
+
+      DATABASE_URL: postgresql+psycopg://doctutorials:doctutorials-local@production-postgres:5432/doctutorials
+
+      AWS_PROFILE: dev
+      AWS_CONFIG_FILE: /root/.aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /root/.aws/credentials
+
+    volumes:
+      - ${HOME}/.aws:/root/.aws
+
+    depends_on:
+      production-api:
+        condition: service_healthy
+
+    command:
+      - python
+      - -m
+      - app.workers.summary_worker
+
+    healthcheck:
+      disable: true
+
+    restart: unless-stopped
+
+
+  production-render-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.render-worker
+
+    container_name: flashcut-render-worker
+
+    user: "0:0"
+
+    env_file:
+      - .env
+
+    environment:
+      APP_ENV: local
+      APP_VERSION: 1.0.0
+      AUTH_DISABLED: "true"
+
+      DATABASE_URL: postgresql+psycopg://doctutorials:doctutorials-local@production-postgres:5432/doctutorials
+
+      AWS_PROFILE: dev
+      AWS_CONFIG_FILE: /root/.aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /root/.aws/credentials
+
+      LOCAL_OUTPUT_DIR: /data/generated
+
+    volumes:
+      - ${HOME}/.aws:/root/.aws
+      - ./var/generated:/data/generated
+
+    depends_on:
+      production-api:
+        condition: service_healthy
+
+    healthcheck:
+      disable: true
+
+    command:
+      - python
+      - -m
+      - app.workers.render_worker
+
+    restart: unless-stopped
+
+
+volumes:
+  flashcut_prod_postgres:
