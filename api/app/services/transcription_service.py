@@ -339,17 +339,31 @@ class TranscriptionService:
             )
         )
 
+        language_code = (
+            self.settings.transcribe_language
+        )
+
+        vocabulary_name = (
+            self.settings.transcribe_vocabulary
+            or ""
+        )
+
+        config_version = (
+            self.settings
+            .transcribe_config_version
+        )
+
         transcript = (
-            self.repo.get_transcript(
-                video_id
+            self.repo.find_cached_transcript(
+                video_id=video_id,
+                source_etag=source_etag,
+                language_code=language_code,
+                vocabulary_name=vocabulary_name,
+                config_version=config_version,
             )
         )
 
-        if (
-            transcript is not None
-            and transcript.source_etag
-            == source_etag
-        ):
+        if transcript is not None:
             return {
                 "job":
                     None,
@@ -363,6 +377,9 @@ class TranscriptionService:
             self.repo.find_active_job(
                 video_id=video_id,
                 source_etag=source_etag,
+                language_code=language_code,
+                vocabulary_name=vocabulary_name,
+                config_version=config_version,
             )
         )
 
@@ -402,6 +419,9 @@ class TranscriptionService:
                 provider_job_name
             ),
             source_etag=source_etag,
+            language_code=language_code,
+            vocabulary_name=vocabulary_name,
+            config_version=config_version,
             status="queued",
             output_key=output_key,
         )
@@ -420,6 +440,9 @@ class TranscriptionService:
                 self.repo.find_active_job(
                     video_id=video_id,
                     source_etag=source_etag,
+                    language_code=language_code,
+                    vocabulary_name=vocabulary_name,
+                    config_version=config_version,
                 )
             )
 
@@ -481,8 +504,7 @@ class TranscriptionService:
                 media_format,
 
             "LanguageCode":
-                self.settings
-                .transcribe_language,
+                language_code,
 
             "OutputBucketName":
                 self.settings
@@ -492,15 +514,10 @@ class TranscriptionService:
                 output_key,
         }
 
-        vocabulary = (
-            self.settings
-            .transcribe_vocabulary
-        )
-
-        if vocabulary:
+        if vocabulary_name:
             args["Settings"] = {
                 "VocabularyName":
-                    vocabulary
+                    vocabulary_name
             }
 
         try:
@@ -572,8 +589,8 @@ class TranscriptionService:
             "failed",
         }:
             transcript = (
-                self.repo.get_transcript(
-                    job.video_id
+                self.repo.get_transcript_for_job(
+                    job.id
                 )
             )
 
@@ -684,13 +701,11 @@ class TranscriptionService:
         )
 
         transcript = (
-            self.repo.save_transcript(
-                video_id=job.video_id,
-                source_etag=(
-                    job.source_etag
-                ),
+            self.repo.create_transcript(
+                job=job,
                 language_code=(
                     language_code
+                    or job.language_code
                 ),
                 full_text=full_text,
                 segments=segments,
@@ -735,9 +750,29 @@ class TranscriptionService:
                 "Video not found.",
             )
 
+        source_etag = (
+            self._current_etag(
+                video
+            )
+        )
+
         transcript = (
-            self.repo.get_transcript(
-                video_id
+            self.repo.find_cached_transcript(
+                video_id=video_id,
+                source_etag=source_etag,
+                language_code=(
+                    self.settings
+                    .transcribe_language
+                ),
+                vocabulary_name=(
+                    self.settings
+                    .transcribe_vocabulary
+                    or ""
+                ),
+                config_version=(
+                    self.settings
+                    .transcribe_config_version
+                ),
             )
         )
 

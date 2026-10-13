@@ -19,6 +19,9 @@ from app.repositories.video_repository import (
 from app.services.summary_engine import (
     generate_summary,
 )
+from app.services.transcription_service import (
+    TranscriptionService,
+)
 
 
 def utcnow():
@@ -69,8 +72,9 @@ class SummaryService:
             )
 
         transcript = (
-            self.transcript_repo
-            .get_transcript(
+            TranscriptionService(
+                self.db
+            ).get_transcript(
                 video_id
             )
         )
@@ -253,8 +257,8 @@ class SummaryService:
 
         transcript = (
             self.transcript_repo
-            .get_transcript(
-                job.video_id
+            .get_transcript_by_id(
+                job.transcript_id
             )
         )
 

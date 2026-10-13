@@ -17,9 +17,13 @@ from app.repositories.transcription_repository import (
 from app.repositories.video_repository import (
     VideoRepository,
 )
+from app.services.transcription_service import (
+    TranscriptionService,
+)
 
 
 WORD_PADDING_SECONDS = 0.25
+MAX_WORDS_PER_RANGE = 5000
 
 
 def utcnow():
@@ -152,6 +156,23 @@ class SelectionService:
                         "start_word_id must be "
                         "less than or equal to "
                         "end_word_id."
+                    ),
+                )
+
+            if (
+                end_id
+                - start_id
+                + 1
+                > MAX_WORDS_PER_RANGE
+            ):
+                raise AppError(
+                    400,
+                    "WORD_RANGE_TOO_LARGE",
+                    (
+                        "A word range cannot "
+                        "contain more than "
+                        f"{MAX_WORDS_PER_RANGE} "
+                        "words."
                     ),
                 )
 
@@ -414,8 +435,9 @@ class SelectionService:
             )
 
         transcript = (
-            self.transcript_repo
-            .get_transcript(
+            TranscriptionService(
+                self.db
+            ).get_transcript(
                 video_id
             )
         )
@@ -579,8 +601,8 @@ class SelectionService:
 
         transcript = (
             self.transcript_repo
-            .get_transcript(
-                selection.video_id
+            .get_transcript_by_id(
+                selection.transcript_id
             )
         )
 

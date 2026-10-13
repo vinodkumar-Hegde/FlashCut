@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     transcribe_language: str = "en-US"
     transcribe_vocabulary: str | None = None
+    transcribe_config_version: str = "v1"
 
     bedrock_region: str | None = None
     bedrock_model_id: str

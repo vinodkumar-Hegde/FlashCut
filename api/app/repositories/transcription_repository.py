@@ -23,21 +23,87 @@ class TranscriptionRepository:
             job_id,
         )
 
+    def get_transcript_by_id(
+        self,
+        transcript_id: str,
+    ) -> Transcript | None:
+        return self.db.get(
+            Transcript,
+            transcript_id,
+        )
+
+    def get_transcript_for_job(
+        self,
+        job_id: str,
+    ) -> Transcript | None:
+        statement = (
+            select(Transcript)
+            .where(
+                Transcript.transcription_job_id
+                == job_id
+            )
+            .limit(1)
+        )
+
+        return self.db.scalar(
+            statement
+        )
+
+    def find_cached_transcript(
+        self,
+        *,
+        video_id: str,
+        source_etag: str,
+        language_code: str,
+        vocabulary_name: str,
+        config_version: str,
+    ) -> Transcript | None:
+        statement = (
+            select(Transcript)
+            .where(
+                Transcript.video_id
+                == video_id,
+                Transcript.source_etag
+                == source_etag,
+                Transcript.language_code
+                == language_code,
+                Transcript.vocabulary_name
+                == vocabulary_name,
+                Transcript.config_version
+                == config_version,
+            )
+            .order_by(
+                Transcript.created_at.desc()
+            )
+            .limit(1)
+        )
+
+        return self.db.scalar(
+            statement
+        )
+
     def find_active_job(
         self,
         *,
         video_id: str,
         source_etag: str,
+        language_code: str,
+        vocabulary_name: str,
+        config_version: str,
     ) -> TranscriptionJob | None:
         statement = (
-            select(
-                TranscriptionJob
-            )
+            select(TranscriptionJob)
             .where(
                 TranscriptionJob.video_id
                 == video_id,
                 TranscriptionJob.source_etag
                 == source_etag,
+                TranscriptionJob.language_code
+                == language_code,
+                TranscriptionJob.vocabulary_name
+                == vocabulary_name,
+                TranscriptionJob.config_version
+                == config_version,
                 TranscriptionJob.status.in_(
                     [
                         "queued",
@@ -55,78 +121,44 @@ class TranscriptionRepository:
             statement
         )
 
-    def get_transcript(
-        self,
-        video_id: str,
-    ) -> Transcript | None:
-        statement = (
-            select(
-                Transcript
-            )
-            .where(
-                Transcript.video_id
-                == video_id
-            )
-            .limit(1)
-        )
-
-        return self.db.scalar(
-            statement
-        )
-
-    def save_transcript(
+    def create_transcript(
         self,
         *,
-        video_id: str,
-        source_etag: str,
-        language_code: str | None,
+        job: TranscriptionJob,
+        language_code: str,
         full_text: str,
         segments: list,
         words: list,
         raw_output_key: str,
     ) -> Transcript:
-        transcript = self.get_transcript(
-            video_id
+        existing = (
+            self.get_transcript_for_job(
+                job.id
+            )
         )
 
-        if transcript is None:
-            transcript = Transcript(
-                video_id=video_id,
-                source_etag=source_etag,
-                language_code=language_code,
-                full_text=full_text,
-                segments=segments,
-                words=words,
-                raw_output_key=raw_output_key,
-            )
+        if existing is not None:
+            return existing
 
-            self.db.add(
-                transcript
-            )
+        transcript = Transcript(
+            video_id=job.video_id,
+            transcription_job_id=job.id,
+            source_etag=job.source_etag,
+            language_code=language_code,
+            vocabulary_name=(
+                job.vocabulary_name
+            ),
+            config_version=(
+                job.config_version
+            ),
+            full_text=full_text,
+            segments=segments,
+            words=words,
+            raw_output_key=raw_output_key,
+        )
 
-        else:
-            transcript.source_etag = (
-                source_etag
-            )
-
-            transcript.language_code = (
-                language_code
-            )
-
-            transcript.full_text = (
-                full_text
-            )
-
-            transcript.segments = (
-                segments
-            )
-
-            transcript.words = (
-                words
-            )
-
-            transcript.raw_output_key = (
-                raw_output_key
-            )
+        self.db.add(
+            transcript
+        )
 
         return transcript

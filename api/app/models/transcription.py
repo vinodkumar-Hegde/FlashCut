@@ -54,6 +54,23 @@ class TranscriptionJob(Base):
         nullable=False,
     )
 
+    language_code: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+    )
+
+    vocabulary_name: Mapped[str] = mapped_column(
+        String(256),
+        nullable=False,
+        default="",
+    )
+
+    config_version: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="v1",
+    )
+
     status: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
@@ -107,8 +124,16 @@ class Transcript(Base):
             ondelete="CASCADE",
         ),
         nullable=False,
-        unique=True,
         index=True,
+    )
+
+    transcription_job_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey(
+            "transcription_jobs.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
     )
 
     source_etag: Mapped[str] = mapped_column(
@@ -116,9 +141,21 @@ class Transcript(Base):
         nullable=False,
     )
 
-    language_code: Mapped[str | None] = mapped_column(
+    language_code: Mapped[str] = mapped_column(
         String(32),
-        nullable=True,
+        nullable=False,
+    )
+
+    vocabulary_name: Mapped[str] = mapped_column(
+        String(256),
+        nullable=False,
+        default="",
+    )
+
+    config_version: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="v1",
     )
 
     full_text: Mapped[str] = mapped_column(
