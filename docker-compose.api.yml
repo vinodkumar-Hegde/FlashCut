@@ -109,6 +109,47 @@ services:
     restart: unless-stopped
 
 
+  production-notes-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+
+    container_name: flashcut-notes-worker
+
+    user: "0:0"
+
+    env_file:
+      - .env
+
+    environment:
+      APP_ENV: local
+      APP_VERSION: 1.0.0
+      AUTH_DISABLED: "true"
+
+      DATABASE_URL: postgresql+psycopg://doctutorials:doctutorials-local@production-postgres:5432/doctutorials
+
+      AWS_PROFILE: dev
+      AWS_CONFIG_FILE: /root/.aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /root/.aws/credentials
+
+    volumes:
+      - ${HOME}/.aws:/root/.aws
+
+    depends_on:
+      production-api:
+        condition: service_healthy
+
+    command:
+      - python
+      - -m
+      - app.workers.notes_worker
+
+    healthcheck:
+      disable: true
+
+    restart: unless-stopped
+
+
   production-render-worker:
     build:
       context: ./api

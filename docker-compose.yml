@@ -15,6 +15,12 @@ services:
       file: docker-compose.api.yml
       service: production-summary-worker
 
+  production-notes-worker:
+    extends:
+      file: docker-compose.api.yml
+      service: production-notes-worker
+
+
   production-render-worker:
     extends:
       file: docker-compose.api.yml

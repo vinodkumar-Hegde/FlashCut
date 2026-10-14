@@ -9,6 +9,7 @@ import {
 } from "react-dom/client";
 
 import "./styles.css";
+import NotesWorkflow from "./NotesWorkflow";
 
 
 const API = "/api/v1";
@@ -170,6 +171,14 @@ function App() {
     targetMinutes,
     setTargetMinutes
   ] = useState(5);
+
+
+  const [
+    noteStyle,
+    setNoteStyle
+  ] = useState(
+    "standard"
+  );
 
   const [
     transcript,
@@ -1495,12 +1504,21 @@ function App() {
 
       <main className="shell">
         <nav className="steps">
-          {[
-            "Source",
-            "Workflow",
-            "Review",
-            "Generate"
-          ].map(
+          {(
+            workflow === "notes"
+              ? [
+                  "Source",
+                  "Workflow",
+                  "Notes",
+                  "Export"
+                ]
+              : [
+                  "Source",
+                  "Workflow",
+                  "Review",
+                  "Generate"
+                ]
+          ).map(
             (label, index) => (
               <button
                 key={label}
@@ -1722,6 +1740,101 @@ function App() {
               </button>
             </div>
 
+            <button
+              type="button"
+              className={
+                "workflow-card "
+                + (
+                  workflow === "notes"
+                    ? "selected"
+                    : ""
+                )
+              }
+              onClick={() =>
+                setWorkflow(
+                  "notes"
+                )
+              }
+            >
+              <span className="workflow-title">
+                Automatic Notes
+              </span>
+
+              <span>
+                Convert the video directly
+                into editable educational
+                notes from the transcript.
+              </span>
+
+              <span className="workflow-note">
+                Standard, Crisp or High-yield.
+                Optional Mind Map, Flowchart
+                and PDF export.
+              </span>
+            </button>
+
+            {workflow === "notes" && (
+              <div className="duration">
+                <strong>
+                  Notes style
+                </strong>
+
+                <div className="note-style-grid">
+                  {[
+                    {
+                      id: "standard",
+                      title: "Standard",
+                      description:
+                        "Structured teaching notes"
+                    },
+                    {
+                      id: "crisp",
+                      title: "Crisp",
+                      description:
+                        "Short revision notes"
+                    },
+                    {
+                      id: "high_yield",
+                      title: "High-yield",
+                      description:
+                        "Priority learning points"
+                    }
+                  ].map(
+                    item => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className={
+                          "note-style-option "
+                          + (
+                            noteStyle
+                            === item.id
+                              ? "selected"
+                              : ""
+                          )
+                        }
+                        onClick={() =>
+                          setNoteStyle(
+                            item.id
+                          )
+                        }
+                      >
+                        <strong>
+                          {item.title}
+                        </strong>
+
+                        <span>
+                          {
+                            item.description
+                          }
+                        </span>
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
             {workflow === "automatic" && (
               <div className="duration">
                 <label className="field">
@@ -1790,19 +1903,49 @@ function App() {
               <button
                 className="primary"
                 disabled={busy}
-                onClick={
-                  prepareWorkflow
-                }
+                onClick={() => {
+                  if (
+                    workflow === "notes"
+                  ) {
+                    setStep(2);
+                    return;
+                  }
+
+                  prepareWorkflow();
+                }}
               >
-                {workflow === "automatic"
-                  ? "Create automatic summary"
-                  : "Prepare manual selection"}
+                {
+                  workflow === "automatic"
+                    ? "Create automatic summary"
+                    : workflow === "notes"
+                    ? "Continue to Notes"
+                    : "Prepare manual selection"
+                }
               </button>
             </div>
           </section>
         )}
 
-        {step === 2 && transcript && (
+        {(
+          workflow === "notes"
+          && (
+            step === 2
+            || step === 3
+          )
+        ) && (
+          <NotesWorkflow
+            videoId={videoId}
+            videoName={
+              currentVideo?.name
+              || "Video"
+            }
+            noteStyle={noteStyle}
+            step={step}
+            setStep={setStep}
+          />
+        )}
+
+        {step === 2 && workflow !== "notes" && transcript && (
           <section className="panel wide">
             <div className="review-header">
               <div>
@@ -2101,6 +2244,131 @@ function App() {
             </section>
 
             )}
+
+            <section className="timestamp-selection-panel">
+              <div className="timestamp-selection-header">
+                <div>
+                  <h2>
+                    Timestamp selection
+                  </h2>
+
+                  <p>
+                    Select complete transcript
+                    ranges using their video
+                    timestamps.
+                  </p>
+                </div>
+
+                <div className="timestamp-selection-count">
+                  <strong>
+                    {selectedIds.length}
+                  </strong>
+
+                  <span>
+                    selected ranges
+                  </span>
+                </div>
+              </div>
+
+              <div className="timestamp-selection-help">
+                Click any row to include or remove
+                that complete timestamp range.
+              </div>
+
+              <div className="timestamp-list">
+                {(transcript?.segments || []).map(
+                  segment => {
+                    const segmentId = Number(
+                      segment.id
+                    );
+
+                    const selected = (
+                      selectedIds.includes(
+                        segmentId
+                      )
+                    );
+
+                    return (
+                      <label
+                        key={
+                          `timestamp-${segmentId}`
+                        }
+                        className={
+                          "timestamp-row "
+                          + (
+                            selected
+                              ? "selected"
+                              : ""
+                          )
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={
+                            selection?.status
+                            !== "draft"
+                          }
+                          onChange={() =>
+                            toggleSegment(
+                              segmentId
+                            )
+                          }
+                        />
+
+                        <div className="timestamp-row-content">
+                          <div className="timestamp-value">
+                            {
+                              formatTimestamp(
+                                segment.start
+                              )
+                            }
+                            {" – "}
+                            {
+                              formatTimestamp(
+                                segment.end
+                              )
+                            }
+                          </div>
+
+                          <div className="timestamp-text">
+                            {segment.text}
+                          </div>
+                        </div>
+
+                        {selected && (
+                          <span className="timestamp-selected-badge">
+                            Selected
+                          </span>
+                        )}
+                      </label>
+                    );
+                  }
+                )}
+              </div>
+
+              <div className="timestamp-selection-footer">
+                <span>
+                  Selected timestamp ranges are
+                  saved together with your word
+                  selections in the same draft.
+                </span>
+
+                <button
+                  className="primary"
+                  disabled={
+                    busy
+                    || selection?.status
+                       !== "draft"
+                  }
+                  onClick={
+                    saveOnly
+                  }
+                >
+                  Save timestamp draft
+                </button>
+              </div>
+            </section>
 
             <section className="manual-selection">
               <div className="manual-selection-header">
@@ -2480,7 +2748,7 @@ function App() {
           </section>
         )}
 
-        {step === 3 && selection && (
+        {step === 3 && workflow !== "notes" && selection && (
           <section className="panel">
             <p className="eyebrow">
               STEP 4

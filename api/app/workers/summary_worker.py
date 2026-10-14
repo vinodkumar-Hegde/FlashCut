@@ -77,6 +77,7 @@ def run():
 
                     failed.failure_reason = (
                         "Automatic summary "
+
                         "generation failed."
                     )
 

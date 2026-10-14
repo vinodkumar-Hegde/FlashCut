@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     bedrock_region: str | None = None
     bedrock_model_id: str
     summary_algorithm_version: str = "v3.1"
+    notes_algorithm_version: str = "v1"
 
     render_queue_url: str
     render_profile_version: str = "v1"

@@ -17,11 +17,7 @@ from app.models.render import (
     RenderJob,
     RenderOutbox,
 )
-from app.models.selection import Selection
-from app.models.render import (
-    RenderJob,
-    RenderOutbox,
-)
+from app.models.note import NoteJob
 
 
 config = context.config

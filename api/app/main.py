@@ -30,6 +30,9 @@ from app.api.selections import (
 from app.api.renders import (
     router as renders_router,
 )
+from app.api.notes import (
+    router as notes_router,
+)
 from app.core.config import (
     get_settings,
 )
@@ -211,4 +214,8 @@ app.include_router(
 
 app.include_router(
     renders_router
+)
+
+app.include_router(
+    notes_router
 )
