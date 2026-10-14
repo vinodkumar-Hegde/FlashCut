@@ -6,6 +6,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Session
 
+from app.db.tenant import (
+    tenant_get,
+)
 from app.models.note import NoteJob
 
 
@@ -20,7 +23,8 @@ class NoteRepository:
         self,
         note_id: str,
     ) -> NoteJob | None:
-        return self.db.get(
+        return tenant_get(
+            self.db,
             NoteJob,
             note_id,
         )
@@ -40,10 +44,12 @@ class NoteRepository:
                     ]
                 ),
                 or_(
-                    NoteJob.next_attempt_at
+                    NoteJob
+                    .next_attempt_at
                     .is_(None),
 
-                    NoteJob.next_attempt_at
+                    NoteJob
+                    .next_attempt_at
                     <= now,
                 ),
             )

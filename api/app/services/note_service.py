@@ -191,6 +191,10 @@ class NoteService:
         if note is None:
             return
 
+        self.db.info[
+            "tenant_id"
+        ] = note.tenant_id
+
         transcript = None
 
         if note.transcript_id:

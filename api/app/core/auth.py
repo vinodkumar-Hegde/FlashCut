@@ -10,7 +10,7 @@ from app.core.errors import AppError
 @dataclass(frozen=True)
 class Principal:
     subject: str
-    tenant_id: str | None = None
+    tenant_id: str
 
 
 def require_principal(
@@ -23,7 +23,10 @@ def require_principal(
 
     if settings.auth_disabled:
         return Principal(
-            subject="local-development"
+            subject="local-development",
+            tenant_id=(
+                settings.local_tenant_id
+            ),
         )
 
     if not authorization:

@@ -15,7 +15,7 @@ from app.core.auth import (
     Principal,
     require_principal,
 )
-from app.db.session import get_db
+from app.db.session import get_tenant_db
 from app.schemas.notes import (
     CreateNoteRequest,
     GenerateVisualRequest,
@@ -84,7 +84,7 @@ def create_notes(
     body: CreateNoteRequest,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -113,7 +113,7 @@ def get_notes(
     note_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -140,7 +140,7 @@ def update_notes(
     body: UpdateNoteRequest,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -174,7 +174,7 @@ def generate_note_visual(
     body: GenerateVisualRequest,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -203,7 +203,7 @@ def export_note_pdf(
     note_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,

@@ -3,6 +3,10 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.tenant import (
+    tenant_get,
+    tenant_select,
+)
 from app.models.render import (
     RenderJob,
     RenderOutbox,
@@ -20,7 +24,8 @@ class RenderRepository:
         self,
         render_id: str,
     ) -> RenderJob | None:
-        return self.db.get(
+        return tenant_get(
+            self.db,
             RenderJob,
             render_id,
         )
@@ -32,12 +37,18 @@ class RenderRepository:
         profile: str,
     ) -> RenderJob | None:
         statement = (
-            select(RenderJob)
+            tenant_select(
+                self.db,
+                RenderJob,
+            )
             .where(
                 RenderJob.selection_id
                 == selection_id,
-                RenderJob.render_profile_version
+
+                RenderJob
+                .render_profile_version
                 == profile,
+
                 RenderJob.status.in_(
                     [
                         "queued",
@@ -47,7 +58,9 @@ class RenderRepository:
                 ),
             )
             .order_by(
-                RenderJob.created_at.desc()
+                RenderJob
+                .created_at
+                .desc()
             )
             .limit(1)
         )
@@ -84,11 +97,14 @@ class RenderRepository:
             .where(
                 RenderOutbox.status
                 == "pending",
-                RenderOutbox.next_attempt_at
+
+                RenderOutbox
+                .next_attempt_at
                 <= now,
             )
             .order_by(
-                RenderOutbox.created_at
+                RenderOutbox
+                .created_at
             )
             .with_for_update(
                 skip_locked=True

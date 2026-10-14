@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     local_output_dir: str | None = None
 
     auth_disabled: bool = False
+    local_tenant_id: str = "local-development"
 
     max_video_list: int = 5000
     max_request_bytes: int = 2_000_000

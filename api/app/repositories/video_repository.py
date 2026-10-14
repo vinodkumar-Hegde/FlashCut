@@ -1,6 +1,9 @@
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.tenant import (
+    tenant_get,
+    tenant_select,
+)
 from app.models.video import Video
 
 
@@ -15,7 +18,8 @@ class VideoRepository:
         self,
         video_id: str,
     ) -> Video | None:
-        return self.db.get(
+        return tenant_get(
+            self.db,
             Video,
             video_id,
         )
@@ -24,10 +28,16 @@ class VideoRepository:
         self,
         key: str,
     ) -> Video | None:
-        statement = select(
-            Video
-        ).where(
-            Video.s3_key == key
+        statement = (
+            tenant_select(
+                self.db,
+                Video,
+            )
+            .where(
+                Video.s3_key
+                == key
+            )
+            .limit(1)
         )
 
         return self.db.scalar(
@@ -38,7 +48,10 @@ class VideoRepository:
         self,
     ) -> list[Video]:
         statement = (
-            select(Video)
+            tenant_select(
+                self.db,
+                Video,
+            )
             .order_by(
                 Video.filename
             )
@@ -73,7 +86,10 @@ class VideoRepository:
             )
 
         else:
-            video.filename = filename
+            video.filename = (
+                filename
+            )
+
             video.etag = etag
 
         return video

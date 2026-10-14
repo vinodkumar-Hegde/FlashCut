@@ -1,7 +1,13 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.summary import SummaryJob
+from app.db.tenant import (
+    tenant_get,
+    tenant_select,
+)
+from app.models.summary import (
+    SummaryJob,
+)
 
 
 class SummaryRepository:
@@ -15,7 +21,8 @@ class SummaryRepository:
         self,
         summary_id: str,
     ) -> SummaryJob | None:
-        return self.db.get(
+        return tenant_get(
+            self.db,
             SummaryJob,
             summary_id,
         )
@@ -29,18 +36,23 @@ class SummaryRepository:
         algorithm_version: str,
     ) -> SummaryJob | None:
         statement = (
-            select(
-                SummaryJob
+            tenant_select(
+                self.db,
+                SummaryJob,
             )
             .where(
                 SummaryJob.transcript_id
                 == transcript_id,
+
                 SummaryJob.target_seconds
                 == target_seconds,
+
                 SummaryJob.model_id
                 == model_id,
+
                 SummaryJob.algorithm_version
                 == algorithm_version,
+
                 SummaryJob.status.in_(
                     [
                         "queued",
@@ -49,7 +61,9 @@ class SummaryRepository:
                 ),
             )
             .order_by(
-                SummaryJob.created_at.desc()
+                SummaryJob
+                .created_at
+                .desc()
             )
             .limit(1)
         )
@@ -67,23 +81,30 @@ class SummaryRepository:
         algorithm_version: str,
     ) -> SummaryJob | None:
         statement = (
-            select(
-                SummaryJob
+            tenant_select(
+                self.db,
+                SummaryJob,
             )
             .where(
                 SummaryJob.transcript_id
                 == transcript_id,
+
                 SummaryJob.target_seconds
                 == target_seconds,
+
                 SummaryJob.model_id
                 == model_id,
+
                 SummaryJob.algorithm_version
                 == algorithm_version,
+
                 SummaryJob.status
                 == "completed",
             )
             .order_by(
-                SummaryJob.completed_at.desc()
+                SummaryJob
+                .completed_at
+                .desc()
             )
             .limit(1)
         )
@@ -122,8 +143,6 @@ class SummaryRepository:
         job.status = "processing"
 
         self.db.commit()
-        self.db.refresh(
-            job
-        )
+        self.db.refresh(job)
 
         return job

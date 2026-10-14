@@ -11,7 +11,7 @@ from app.core.auth import (
     Principal,
     require_principal,
 )
-from app.db.session import get_db
+from app.db.session import get_tenant_db
 from app.schemas.transcriptions import (
     StartTranscriptionRequest,
     TranscriptResponse,
@@ -83,7 +83,7 @@ def start_transcription(
     response: Response,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -129,7 +129,7 @@ def transcription_status(
     job_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -165,7 +165,7 @@ def get_transcript(
     video_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -219,7 +219,7 @@ def get_transcript_words(
     video_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,

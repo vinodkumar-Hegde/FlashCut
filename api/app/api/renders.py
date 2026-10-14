@@ -11,7 +11,7 @@ from app.core.auth import (
     Principal,
     require_principal,
 )
-from app.db.session import get_db
+from app.db.session import get_tenant_db
 from app.schemas.renders import (
     CreateRenderRequest,
     RenderResponse,
@@ -80,7 +80,7 @@ def create_render(
     response: Response,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -116,7 +116,7 @@ def get_render(
     render_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -147,7 +147,7 @@ def get_render_result(
     render_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,

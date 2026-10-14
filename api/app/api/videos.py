@@ -10,7 +10,7 @@ from app.core.auth import (
     Principal,
     require_principal,
 )
-from app.db.session import get_db
+from app.db.session import get_tenant_db
 from app.schemas.videos import (
     RenameVideoRequest,
     VideoListResponse,
@@ -45,7 +45,7 @@ def to_response(
 def list_videos(
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -84,7 +84,7 @@ def rename_video(
     body: RenameVideoRequest,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,

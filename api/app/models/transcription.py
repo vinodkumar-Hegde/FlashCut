@@ -33,6 +33,12 @@ class TranscriptionJob(Base):
         ),
     )
 
+    tenant_id: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        index=True,
+    )
+
     video_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey(
@@ -115,6 +121,12 @@ class Transcript(Base):
         default=lambda: str(
             uuid.uuid4()
         ),
+    )
+
+    tenant_id: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        index=True,
     )
 
     video_id: Mapped[str] = mapped_column(

@@ -24,6 +24,12 @@ class Video(Base):
         ),
     )
 
+    tenant_id: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        index=True,
+    )
+
     s3_key: Mapped[str] = mapped_column(
         String(2048),
         unique=True,

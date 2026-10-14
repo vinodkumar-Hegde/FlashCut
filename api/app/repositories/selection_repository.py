@@ -1,6 +1,11 @@
 from sqlalchemy.orm import Session
 
-from app.models.selection import Selection
+from app.db.tenant import (
+    tenant_get,
+)
+from app.models.selection import (
+    Selection,
+)
 
 
 class SelectionRepository:
@@ -14,7 +19,8 @@ class SelectionRepository:
         self,
         selection_id: str,
     ) -> Selection | None:
-        return self.db.get(
+        return tenant_get(
+            self.db,
             Selection,
             selection_id,
         )

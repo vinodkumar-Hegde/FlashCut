@@ -11,7 +11,7 @@ from app.core.auth import (
     Principal,
     require_principal,
 )
-from app.db.session import get_db
+from app.db.session import get_tenant_db
 from app.schemas.selections import (
     ApproveSelectionRequest,
     CreateSelectionRequest,
@@ -87,7 +87,7 @@ def create_selection(
     body: CreateSelectionRequest,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -117,7 +117,7 @@ def get_selection(
     selection_id: str,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -145,7 +145,7 @@ def update_selection(
     body: UpdateSelectionRequest,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
@@ -186,7 +186,7 @@ def approve_selection(
     body: ApproveSelectionRequest,
     db: Annotated[
         Session,
-        Depends(get_db),
+        Depends(get_tenant_db),
     ],
     principal: Annotated[
         Principal,
