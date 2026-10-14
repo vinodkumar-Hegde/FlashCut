@@ -4,9 +4,21 @@ class AppError(Exception):
         status_code: int,
         code: str,
         message: str,
+        headers: dict[str, str]
+        | None = None,
     ):
-        super().__init__(message)
+        super().__init__(
+            message
+        )
 
-        self.status_code = status_code
+        self.status_code = (
+            status_code
+        )
+
         self.code = code
         self.message = message
+
+        self.headers = (
+            headers
+            or {}
+        )

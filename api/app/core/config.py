@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -50,8 +50,65 @@ class Settings(BaseSettings):
     auth_disabled: bool = False
     local_tenant_id: str = "local-development"
 
+    auth_jwt_issuer: str | None = None
+    auth_jwt_audience: str | None = None
+    auth_jwks_url: str | None = None
+
+    auth_tenant_claim: str = "custom:tenant_id"
+    auth_subject_claim: str = "sub"
+
+    auth_jwt_audience_claim: str = "client_id"
+    auth_jwt_token_use: str | None = "access"
+    auth_jwt_algorithms: str = "RS256"
+    auth_clock_skew_seconds: int = 60
+
     max_video_list: int = 5000
     max_request_bytes: int = 2_000_000
+
+    @model_validator(mode="after")
+    def validate_authentication(self):
+        environment = (
+            self.app_env
+            .strip()
+            .lower()
+        )
+
+        if (
+            environment == "production"
+            and self.auth_disabled
+        ):
+            raise ValueError(
+                "AUTH_DISABLED cannot be true "
+                "when APP_ENV=production"
+            )
+
+        if not self.auth_disabled:
+            missing = []
+
+            if not self.auth_jwt_issuer:
+                missing.append(
+                    "AUTH_JWT_ISSUER"
+                )
+
+            if not self.auth_jwt_audience:
+                missing.append(
+                    "AUTH_JWT_AUDIENCE"
+                )
+
+            if not self.auth_tenant_claim:
+                missing.append(
+                    "AUTH_TENANT_CLAIM"
+                )
+
+            if missing:
+                raise ValueError(
+                    "Authentication configuration "
+                    "is incomplete: "
+                    + ", ".join(missing)
+                )
+
+        return self
+
 
     @field_validator(
         "s3_video_prefix",

@@ -111,6 +111,7 @@ async def app_error_handler(
         status_code=(
             exc.status_code
         ),
+        headers=exc.headers,
         content={
             "error": {
                 "code":

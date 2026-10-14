@@ -63,3 +63,19 @@ api-review.txt
 *-code-review.tar.gz
 
 /legacy/
+
+# Database / local backup artifacts
+*.sql
+*.dump
+*.dump.gz
+*.sql.gz
+backup/
+backups/
+_backup/
+_backups/
+
+# Ad-hoc copied files
+*.copy
+*.save
+*.tmp
+*.temp
