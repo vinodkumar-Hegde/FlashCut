@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     s3_bucket: str
     s3_video_prefix: str = "videos/"
+    s3_tenant_prefix_template: str | None = None
     s3_output_prefix: str = "generated/"
     s3_transcript_prefix: str = "transcripts/"
 
