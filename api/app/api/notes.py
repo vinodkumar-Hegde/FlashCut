@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import (
     APIRouter,
     Depends,
+    Header,
     Response,
 )
 from fastapi.responses import (
@@ -14,6 +15,10 @@ from sqlalchemy.orm import Session
 from app.core.auth import (
     Principal,
     require_principal,
+)
+from app.core.idempotency import (
+    idempotency_hash,
+    normalize_idempotency_key,
 )
 from app.db.session import get_tenant_db
 from app.schemas.notes import (
@@ -82,6 +87,7 @@ def to_response(
 )
 def create_notes(
     body: CreateNoteRequest,
+    response: Response,
     db: Annotated[
         Session,
         Depends(get_tenant_db),
@@ -92,13 +98,45 @@ def create_notes(
             require_principal
         ),
     ],
+    idempotency_key_header: Annotated[
+        str | None,
+        Header(
+            alias="Idempotency-Key"
+        ),
+    ] = None,
 ):
-    note = NoteService(
-        db
-    ).create(
-        video_id=body.video_id,
-        style=body.style,
+    key = normalize_idempotency_key(
+        idempotency_key_header
     )
+
+    request_hash = (
+        idempotency_hash(
+            operation="create-notes",
+            payload=body.model_dump(
+                mode="json"
+            ),
+        )
+        if key
+        else None
+    )
+
+    note, replayed = (
+        NoteService(db)
+        .create(
+            video_id=body.video_id,
+            style=body.style,
+            idempotency_key=key,
+            idempotency_hash=(
+                request_hash
+            ),
+        )
+    )
+
+    if replayed:
+        response.status_code = 200
+        response.headers[
+            "Idempotency-Replayed"
+        ] = "true"
 
     return to_response(
         note

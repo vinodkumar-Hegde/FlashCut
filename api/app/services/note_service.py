@@ -5,10 +5,14 @@ from datetime import (
     timezone,
 )
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.errors import AppError
+from app.core.idempotency import (
+    ensure_idempotency_match,
+)
 from app.models.note import NoteJob
 from app.repositories.note_repository import (
     NoteRepository,
@@ -70,7 +74,32 @@ class NoteService:
         *,
         video_id: str,
         style: str,
-    ) -> NoteJob:
+        idempotency_key: str | None = None,
+        idempotency_hash: str | None = None,
+    ) -> tuple[NoteJob, bool]:
+        if idempotency_key:
+            existing = (
+                self.repo
+                .get_by_idempotency_key(
+                    idempotency_key
+                )
+            )
+
+            if existing is not None:
+                ensure_idempotency_match(
+                    stored_hash=(
+                        existing
+                        .idempotency_hash
+                    ),
+                    request_hash=(
+                        idempotency_hash
+                    ),
+                )
+
+                return (
+                    existing,
+                    True,
+                )
         video = self.video_repo.get(
             video_id
         )
@@ -105,6 +134,14 @@ class NoteService:
         note = NoteJob(
             id=str(
                 uuid.uuid4()
+            ),
+
+            idempotency_key=(
+                idempotency_key
+            ),
+
+            idempotency_hash=(
+                idempotency_hash
             ),
 
             video_id=video_id,
@@ -158,10 +195,47 @@ class NoteService:
         )
 
         self.db.add(note)
-        self.db.commit()
+
+        try:
+            self.db.commit()
+
+        except IntegrityError:
+            self.db.rollback()
+
+            if not idempotency_key:
+                raise
+
+            existing = (
+                self.repo
+                .get_by_idempotency_key(
+                    idempotency_key
+                )
+            )
+
+            if existing is None:
+                raise
+
+            ensure_idempotency_match(
+                stored_hash=(
+                    existing
+                    .idempotency_hash
+                ),
+                request_hash=(
+                    idempotency_hash
+                ),
+            )
+
+            return (
+                existing,
+                True,
+            )
+
         self.db.refresh(note)
 
-        return note
+        return (
+            note,
+            False,
+        )
 
     def get(
         self,

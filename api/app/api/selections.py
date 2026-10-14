@@ -3,6 +3,8 @@ from typing import Annotated
 from fastapi import (
     APIRouter,
     Depends,
+    Header,
+    Response,
     status,
 )
 from sqlalchemy.orm import Session
@@ -10,6 +12,10 @@ from sqlalchemy.orm import Session
 from app.core.auth import (
     Principal,
     require_principal,
+)
+from app.core.idempotency import (
+    idempotency_hash,
+    normalize_idempotency_key,
 )
 from app.db.session import get_tenant_db
 from app.schemas.selections import (
@@ -85,6 +91,7 @@ def to_response(
 )
 def create_selection(
     body: CreateSelectionRequest,
+    response: Response,
     db: Annotated[
         Session,
         Depends(get_tenant_db),
@@ -95,14 +102,47 @@ def create_selection(
             require_principal
         ),
     ],
+    idempotency_key_header: Annotated[
+        str | None,
+        Header(
+            alias="Idempotency-Key"
+        ),
+    ] = None,
 ):
-    selection = (
+    key = normalize_idempotency_key(
+        idempotency_key_header
+    )
+
+    request_hash = (
+        idempotency_hash(
+            operation=(
+                "create-selection"
+            ),
+            payload=body.model_dump(
+                mode="json"
+            ),
+        )
+        if key
+        else None
+    )
+
+    selection, replayed = (
         SelectionService(db)
         .create(
             video_id=body.video_id,
             summary_id=body.summary_id,
+            idempotency_key=key,
+            idempotency_hash=(
+                request_hash
+            ),
         )
     )
+
+    if replayed:
+        response.status_code = 200
+        response.headers[
+            "Idempotency-Replayed"
+        ] = "true"
 
     return to_response(
         selection

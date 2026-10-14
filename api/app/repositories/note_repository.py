@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.tenant import (
     tenant_get,
+    tenant_select,
 )
 from app.models.note import NoteJob
 
@@ -27,6 +28,27 @@ class NoteRepository:
             self.db,
             NoteJob,
             note_id,
+        )
+
+    def get_by_idempotency_key(
+        self,
+        key: str,
+    ) -> NoteJob | None:
+        statement = (
+            tenant_select(
+                self.db,
+                NoteJob,
+            )
+            .where(
+                NoteJob
+                .idempotency_key
+                == key
+            )
+            .limit(1)
+        )
+
+        return self.db.scalar(
+            statement
         )
 
     def claim_next(

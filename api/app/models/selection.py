@@ -35,6 +35,16 @@ class Selection(Base):
         index=True,
     )
 
+    idempotency_key: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+    )
+
+    idempotency_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
     video_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey(

@@ -1,9 +1,13 @@
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
+from app.core.idempotency import (
+    ensure_idempotency_match,
+)
 from app.models.selection import Selection
 from app.repositories.selection_repository import (
     SelectionRepository,
@@ -422,7 +426,32 @@ class SelectionService:
         *,
         video_id: str,
         summary_id: str | None,
-    ) -> Selection:
+        idempotency_key: str | None = None,
+        idempotency_hash: str | None = None,
+    ) -> tuple[Selection, bool]:
+        if idempotency_key:
+            existing = (
+                self.repo
+                .get_by_idempotency_key(
+                    idempotency_key
+                )
+            )
+
+            if existing is not None:
+                ensure_idempotency_match(
+                    stored_hash=(
+                        existing
+                        .idempotency_hash
+                    ),
+                    request_hash=(
+                        idempotency_hash
+                    ),
+                )
+
+                return (
+                    existing,
+                    True,
+                )
         video = self.video_repo.get(
             video_id
         )
@@ -525,6 +554,12 @@ class SelectionService:
 
         selection = Selection(
             id=str(uuid.uuid4()),
+            idempotency_key=(
+                idempotency_key
+            ),
+            idempotency_hash=(
+                idempotency_hash
+            ),
             video_id=video_id,
             transcript_id=transcript.id,
             summary_id=summary_id,
@@ -544,13 +579,48 @@ class SelectionService:
             selection
         )
 
-        self.db.commit()
+        try:
+            self.db.commit()
+
+        except IntegrityError:
+            self.db.rollback()
+
+            if not idempotency_key:
+                raise
+
+            existing = (
+                self.repo
+                .get_by_idempotency_key(
+                    idempotency_key
+                )
+            )
+
+            if existing is None:
+                raise
+
+            ensure_idempotency_match(
+                stored_hash=(
+                    existing
+                    .idempotency_hash
+                ),
+                request_hash=(
+                    idempotency_hash
+                ),
+            )
+
+            return (
+                existing,
+                True,
+            )
 
         self.db.refresh(
             selection
         )
 
-        return selection
+        return (
+            selection,
+            False,
+        )
 
     def get(
         self,
