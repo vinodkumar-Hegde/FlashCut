@@ -42,6 +42,9 @@ from app.core.errors import AppError
 from app.core.logging import (
     configure_logging,
 )
+from app.core.observability import (
+    ObservabilityMiddleware,
+)
 from app.core.security import (
     SecurityMiddleware,
 )
@@ -79,6 +82,10 @@ app.add_middleware(
     settings=settings,
 )
 
+app.add_middleware(
+    ObservabilityMiddleware,
+)
+
 
 @app.exception_handler(
     AppError
@@ -87,6 +94,10 @@ async def app_error_handler(
     request: Request,
     exc: AppError,
 ):
+    request.state.error_code = (
+        exc.code
+    )
+
     return JSONResponse(
         status_code=(
             exc.status_code
@@ -116,6 +127,10 @@ async def validation_handler(
     request: Request,
     exc: RequestValidationError,
 ):
+    request.state.error_code = (
+        "VALIDATION_ERROR"
+    )
+
     return JSONResponse(
         status_code=422,
         content={
@@ -147,6 +162,10 @@ async def unexpected_error_handler(
     request: Request,
     exc: Exception,
 ):
+    request.state.error_code = (
+        "INTERNAL_ERROR"
+    )
+
     logger.exception(
         "Unhandled API exception"
     )

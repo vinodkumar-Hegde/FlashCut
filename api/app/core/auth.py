@@ -434,6 +434,14 @@ def require_principal(
             settings=settings,
         )
 
+    request.state.tenant_id = (
+        principal.tenant_id
+    )
+
+    request.state.subject = (
+        principal.subject
+    )
+
     enforce_rate_limit(
         request,
         tenant_id=(

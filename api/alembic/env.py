@@ -18,6 +18,7 @@ from app.models.render import (
     RenderOutbox,
 )
 from app.models.note import NoteJob
+from app.models.audit import AuditEvent
 
 
 config = context.config

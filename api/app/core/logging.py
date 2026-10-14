@@ -2,7 +2,30 @@ import json
 import logging
 import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import (
+    datetime,
+    timezone,
+)
+
+
+STRUCTURED_FIELDS = (
+    "event",
+    "request_id",
+    "tenant_id",
+    "subject",
+    "method",
+    "route",
+    "path",
+    "status_code",
+    "duration_ms",
+    "action",
+    "outcome",
+    "resource_type",
+    "resource_id",
+    "error_code",
+    "job_id",
+    "attempt_count",
+)
 
 
 class JsonFormatter(
@@ -28,16 +51,17 @@ class JsonFormatter(
                 record.getMessage(),
         }
 
-        request_id = getattr(
-            record,
-            "request_id",
-            None,
-        )
+        for field in STRUCTURED_FIELDS:
+            value = getattr(
+                record,
+                field,
+                None,
+            )
 
-        if request_id:
-            payload[
-                "request_id"
-            ] = request_id
+            if value is not None:
+                payload[
+                    field
+                ] = value
 
         if record.exc_info:
             payload[

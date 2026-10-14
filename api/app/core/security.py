@@ -331,6 +331,15 @@ class SecurityMiddleware:
         code,
         message,
     ):
+        state = scope.setdefault(
+            "state",
+            {},
+        )
+
+        state[
+            "error_code"
+        ] = code
+
         response = JSONResponse(
             status_code=status_code,
             content={
