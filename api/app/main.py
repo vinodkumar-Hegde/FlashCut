@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 from fastapi import (
     FastAPI,
@@ -10,6 +9,9 @@ from fastapi.exceptions import (
 )
 from fastapi.responses import (
     JSONResponse,
+)
+from starlette.middleware.trustedhost import (
+    TrustedHostMiddleware,
 )
 
 from app.api.health import (
@@ -40,6 +42,9 @@ from app.core.errors import AppError
 from app.core.logging import (
     configure_logging,
 )
+from app.core.security import (
+    SecurityMiddleware,
+)
 
 
 configure_logging()
@@ -62,42 +67,17 @@ app = FastAPI(
     redoc_url=None,
 )
 
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=(
+        settings.trusted_host_list
+    ),
+)
 
-@app.middleware("http")
-async def request_context(
-    request: Request,
-    call_next,
-):
-    request_id = (
-        request.headers.get(
-            "X-Request-ID"
-        )
-        or str(
-            uuid.uuid4()
-        )
-    )
-
-    request.state.request_id = (
-        request_id
-    )
-
-    response = await call_next(
-        request
-    )
-
-    response.headers[
-        "X-Request-ID"
-    ] = request_id
-
-    response.headers[
-        "X-Content-Type-Options"
-    ] = "nosniff"
-
-    response.headers[
-        "X-Frame-Options"
-    ] = "DENY"
-
-    return response
+app.add_middleware(
+    SecurityMiddleware,
+    settings=settings,
+)
 
 
 @app.exception_handler(

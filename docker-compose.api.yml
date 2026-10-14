@@ -23,6 +23,30 @@ services:
     restart: unless-stopped
 
 
+
+  production-redis:
+    image: redis:7-alpine
+    container_name: flashcut-redis
+
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+    restart: unless-stopped
+
+
   production-api:
     build:
       context: ./api
@@ -43,6 +67,10 @@ services:
       APP_VERSION: 1.0.0
       AUTH_DISABLED: "true"
 
+      RATE_LIMIT_ENABLED: "true"
+      REDIS_URL: redis://production-redis:6379/0
+      TRUSTED_HOSTS: "*"
+
       DATABASE_URL: postgresql+psycopg://doctutorials:doctutorials-local@production-postgres:5432/doctutorials
 
       AWS_PROFILE: dev
@@ -54,6 +82,9 @@ services:
 
     depends_on:
       production-postgres:
+        condition: service_healthy
+
+      production-redis:
         condition: service_healthy
 
     command:

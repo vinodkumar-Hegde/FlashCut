@@ -5,6 +5,11 @@ services:
       file: docker-compose.api.yml
       service: production-postgres
 
+  production-redis:
+    extends:
+      file: docker-compose.api.yml
+      service: production-redis
+
   production-api:
     extends:
       file: docker-compose.api.yml

@@ -5,6 +5,9 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.providers.aws import s3_client
+from app.providers.redis import (
+    redis_client,
+)
 
 
 router = APIRouter(
@@ -40,6 +43,9 @@ def ready():
         s3_client().head_bucket(
             Bucket=settings.s3_bucket
         )
+
+        if settings.rate_limit_enabled:
+            redis_client().ping()
 
     except Exception:
         return JSONResponse(

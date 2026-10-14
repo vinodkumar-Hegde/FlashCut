@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     auth_jwt_algorithms: str = "RS256"
     auth_clock_skew_seconds: int = 60
 
+    trusted_hosts: str = "*"
+
+    redis_url: str | None = None
+    rate_limit_enabled: bool = False
+    rate_limit_requests_per_minute: int = 300
+    rate_limit_write_requests_per_minute: int = 60
+
     max_video_list: int = 5000
     max_request_bytes: int = 2_000_000
 
@@ -82,6 +89,53 @@ class Settings(BaseSettings):
                 "AUTH_DISABLED cannot be true "
                 "when APP_ENV=production"
             )
+
+        if (
+            self.rate_limit_enabled
+            and not self.redis_url
+        ):
+            raise ValueError(
+                "REDIS_URL is required when "
+                "RATE_LIMIT_ENABLED=true"
+            )
+
+        if (
+            self.rate_limit_requests_per_minute
+            < 1
+            or self.rate_limit_write_requests_per_minute
+            < 1
+        ):
+            raise ValueError(
+                "Rate limits must be positive."
+            )
+
+        if self.max_request_bytes < 1024:
+            raise ValueError(
+                "MAX_REQUEST_BYTES is too small."
+            )
+
+        if environment == "production":
+            hosts = [
+                item.strip()
+                for item
+                in self.trusted_hosts.split(",")
+                if item.strip()
+            ]
+
+            if (
+                not hosts
+                or "*" in hosts
+            ):
+                raise ValueError(
+                    "TRUSTED_HOSTS must be explicit "
+                    "when APP_ENV=production"
+                )
+
+            if not self.rate_limit_enabled:
+                raise ValueError(
+                    "RATE_LIMIT_ENABLED must be true "
+                    "when APP_ENV=production"
+                )
 
         if not self.auth_disabled:
             missing = []
@@ -109,6 +163,23 @@ class Settings(BaseSettings):
                 )
 
         return self
+
+
+    @property
+    def trusted_host_list(
+        self,
+    ) -> list[str]:
+        hosts = [
+            item.strip()
+            for item
+            in self.trusted_hosts.split(",")
+            if item.strip()
+        ]
+
+        return (
+            hosts
+            or ["*"]
+        )
 
 
     @field_validator(

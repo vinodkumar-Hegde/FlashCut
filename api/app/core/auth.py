@@ -5,7 +5,7 @@ from typing import Annotated
 
 import jwt
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBearer,
@@ -23,6 +23,9 @@ from app.core.config import (
     get_settings,
 )
 from app.core.errors import AppError
+from app.core.rate_limit import (
+    enforce_rate_limit,
+)
 
 
 bearer_scheme = HTTPBearer(
@@ -375,6 +378,7 @@ def validate_jwt_token(
 
 
 def require_principal(
+    request: Request,
     credentials: Annotated[
         HTTPAuthorizationCredentials
         | None,
@@ -386,7 +390,7 @@ def require_principal(
     settings = get_settings()
 
     if settings.auth_disabled:
-        return Principal(
+        principal = Principal(
             subject=(
                 "local-development"
             ),
@@ -395,35 +399,49 @@ def require_principal(
             ),
         )
 
-    if credentials is None:
-        raise authentication_error(
-            "AUTHENTICATION_REQUIRED",
-            "Authentication is required.",
+    else:
+        if credentials is None:
+            raise authentication_error(
+                "AUTHENTICATION_REQUIRED",
+                "Authentication is required.",
+            )
+
+        if (
+            credentials.scheme.lower()
+            != "bearer"
+        ):
+            raise authentication_error(
+                "INVALID_AUTHENTICATION_SCHEME",
+                (
+                    "Use a Bearer "
+                    "access token."
+                ),
+            )
+
+        token = (
+            credentials.credentials
+            .strip()
         )
 
-    if (
-        credentials.scheme.lower()
-        != "bearer"
-    ):
-        raise authentication_error(
-            "INVALID_AUTHENTICATION_SCHEME",
-            (
-                "Use a Bearer access token."
-            ),
+        if not token:
+            raise authentication_error(
+                "AUTHENTICATION_REQUIRED",
+                "Authentication is required.",
+            )
+
+        principal = validate_jwt_token(
+            token,
+            settings=settings,
         )
 
-    token = (
-        credentials.credentials
-        .strip()
+    enforce_rate_limit(
+        request,
+        tenant_id=(
+            principal.tenant_id
+        ),
+        subject=(
+            principal.subject
+        ),
     )
 
-    if not token:
-        raise authentication_error(
-            "AUTHENTICATION_REQUIRED",
-            "Authentication is required.",
-        )
-
-    return validate_jwt_token(
-        token,
-        settings=settings,
-    )
+    return principal
