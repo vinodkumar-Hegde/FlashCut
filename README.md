@@ -36,6 +36,14 @@ S3 bucket and object key and call `/api/v1/videos/resolve`.
 Downstream APIs use the returned DT-FlashCut `video_id`.
 Arbitrary public or presigned URLs are not trusted render inputs.
 
+## Integration and QA handoff
+
+Detailed integration contract:
+`docs/integration-api.md`
+
+Generation E2E gate:
+`./scripts/generation-e2e-test.sh`
+
 ## API-only local stack
 
 docker compose -f docker-compose.api.yml up -d --build
