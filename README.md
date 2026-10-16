@@ -38,6 +38,18 @@ Arbitrary public or presigned URLs are not trusted render inputs.
 
 ## Integration and QA handoff
 
+Master architecture and team handover:
+`docs/team-handover.md`
+
+Developer guide:
+`docs/developer-guide.md`
+
+DevOps / platform runbook:
+`docs/devops-runbook.md`
+
+QA release runbook:
+`docs/qa-runbook.md`
+
 Detailed integration contract:
 `docs/integration-api.md`
 
