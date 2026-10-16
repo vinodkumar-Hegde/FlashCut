@@ -22,3 +22,27 @@ variable "transcribe_language" {
   type    = string
   default = "en-US"
 }
+
+
+variable "expected_aws_account_id" {
+  type      = string
+  sensitive = true
+
+  validation {
+    condition = can(
+      regex(
+        "^[0-9]{12}$",
+        var.expected_aws_account_id,
+      )
+    )
+
+    error_message = "expected_aws_account_id must contain exactly 12 digits."
+  }
+}
+
+
+variable "bootstrap_mode" {
+  type        = bool
+  default     = true
+  description = "Keep all ECS services at zero until images and database migrations are ready."
+}

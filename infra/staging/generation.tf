@@ -489,62 +489,7 @@ resource "aws_ecs_task_definition" "generation_dispatcher" {
 
       essential = true
 
-      environment = concat(
-        local.common_environment,
-        [
-          {
-            name = "QUICK_SUMMARY_QUEUE_URL"
-
-            value = (
-              aws_sqs_queue
-              .quick_summary
-              .url
-            )
-          },
-
-          {
-            name = "LEARNING_MATERIAL_QUEUE_URL"
-
-            value = (
-              aws_sqs_queue
-              .learning_material
-              .url
-            )
-          },
-
-          {
-            name = "GENERATION_VISIBILITY_TIMEOUT_SECONDS"
-            value = tostring(
-              var.generation_visibility_timeout_seconds
-            )
-          },
-
-          {
-            name  = "GENERATION_HEARTBEAT_INTERVAL_SECONDS"
-            value = "60"
-          },
-
-          {
-            name  = "GENERATION_QUEUE_PUBLISH_MAX_ATTEMPTS"
-            value = "20"
-          },
-
-          {
-            name  = "GENERATION_DISPATCH_POLL_SECONDS"
-            value = "0.5"
-          },
-
-          {
-            name  = "GENERATION_OUTBOX_BATCH_SIZE"
-            value = "20"
-          },
-
-          {
-            name  = "GENERATION_STALE_AFTER_SECONDS"
-            value = "180"
-          },
-        ]
-      )
+      environment = local.common_environment
 
       secrets = local.common_secrets
 
@@ -621,63 +566,7 @@ resource "aws_ecs_task_definition" "quick_summary" {
 
       essential = true
 
-      environment = concat(
-        local.common_environment,
-        [
-          {
-            name = "QUICK_SUMMARY_QUEUE_URL"
-
-            value = (
-              aws_sqs_queue
-              .quick_summary
-              .url
-            )
-          },
-
-          {
-            name = "LEARNING_MATERIAL_QUEUE_URL"
-
-            value = (
-              aws_sqs_queue
-              .learning_material
-              .url
-            )
-          },
-
-          {
-            name = "GENERATION_VISIBILITY_TIMEOUT_SECONDS"
-
-            value = tostring(
-              var.generation_visibility_timeout_seconds
-            )
-          },
-
-          {
-            name  = "GENERATION_HEARTBEAT_INTERVAL_SECONDS"
-            value = "60"
-          },
-
-          {
-            name  = "GENERATION_QUEUE_PUBLISH_MAX_ATTEMPTS"
-            value = "20"
-          },
-
-          {
-            name  = "GENERATION_DISPATCH_POLL_SECONDS"
-            value = "0.5"
-          },
-
-          {
-            name  = "GENERATION_OUTBOX_BATCH_SIZE"
-            value = "20"
-          },
-
-          {
-            name  = "GENERATION_STALE_AFTER_SECONDS"
-            value = "180"
-          },
-        ]
-      )
+      environment = local.common_environment
 
       secrets = local.common_secrets
 
@@ -754,63 +643,7 @@ resource "aws_ecs_task_definition" "learning_material" {
 
       essential = true
 
-      environment = concat(
-        local.common_environment,
-        [
-          {
-            name = "QUICK_SUMMARY_QUEUE_URL"
-
-            value = (
-              aws_sqs_queue
-              .quick_summary
-              .url
-            )
-          },
-
-          {
-            name = "LEARNING_MATERIAL_QUEUE_URL"
-
-            value = (
-              aws_sqs_queue
-              .learning_material
-              .url
-            )
-          },
-
-          {
-            name = "GENERATION_VISIBILITY_TIMEOUT_SECONDS"
-
-            value = tostring(
-              var.generation_visibility_timeout_seconds
-            )
-          },
-
-          {
-            name  = "GENERATION_HEARTBEAT_INTERVAL_SECONDS"
-            value = "60"
-          },
-
-          {
-            name  = "GENERATION_QUEUE_PUBLISH_MAX_ATTEMPTS"
-            value = "20"
-          },
-
-          {
-            name  = "GENERATION_DISPATCH_POLL_SECONDS"
-            value = "0.5"
-          },
-
-          {
-            name  = "GENERATION_OUTBOX_BATCH_SIZE"
-            value = "20"
-          },
-
-          {
-            name  = "GENERATION_STALE_AFTER_SECONDS"
-            value = "180"
-          },
-        ]
-      )
+      environment = local.common_environment
 
       secrets = local.common_secrets
 
@@ -863,7 +696,7 @@ resource "aws_ecs_service" "generation_dispatcher" {
     .arn
   )
 
-  desired_count = 1
+  desired_count = var.bootstrap_mode ? 0 : 1
 
   launch_type = "FARGATE"
 
@@ -906,9 +739,7 @@ resource "aws_ecs_service" "quick_summary" {
     .arn
   )
 
-  desired_count = (
-    var.quick_summary_worker_min_count
-  )
+  desired_count = var.bootstrap_mode ? 0 : var.quick_summary_worker_min_count
 
   launch_type = "FARGATE"
 
@@ -957,9 +788,7 @@ resource "aws_ecs_service" "learning_material" {
     .arn
   )
 
-  desired_count = (
-    var.learning_material_worker_min_count
-  )
+  desired_count = var.bootstrap_mode ? 0 : var.learning_material_worker_min_count
 
   launch_type = "FARGATE"
 
@@ -1006,9 +835,7 @@ resource "aws_appautoscaling_target" "quick_summary" {
     "ecs:service:DesiredCount"
   )
 
-  min_capacity = (
-    var.quick_summary_worker_min_count
-  )
+  min_capacity = var.bootstrap_mode ? 0 : var.quick_summary_worker_min_count
 
   max_capacity = (
     var.quick_summary_worker_max_count
@@ -1025,9 +852,7 @@ resource "aws_appautoscaling_target" "learning_material" {
     "ecs:service:DesiredCount"
   )
 
-  min_capacity = (
-    var.learning_material_worker_min_count
-  )
+  min_capacity = var.bootstrap_mode ? 0 : var.learning_material_worker_min_count
 
   max_capacity = (
     var.learning_material_worker_max_count

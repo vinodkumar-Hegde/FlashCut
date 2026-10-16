@@ -1244,7 +1244,7 @@ resource "aws_ecs_task_definition" "api" {
       command = [
         "sh",
         "-c",
-        "alembic -c /app/alembic.ini upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 5001 --no-access-log",
+        "exec uvicorn app.main:app --host 0.0.0.0 --port 5001 --no-access-log",
       ]
 
       logConfiguration = {
@@ -1433,7 +1433,7 @@ resource "aws_ecs_service" "api" {
 
   task_definition = aws_ecs_task_definition.api.arn
 
-  desired_count = var.api_desired_count
+  desired_count = var.bootstrap_mode ? 0 : var.api_desired_count
 
   launch_type = "FARGATE"
 
@@ -1467,7 +1467,7 @@ resource "aws_ecs_service" "summary" {
 
   task_definition = aws_ecs_task_definition.summary.arn
 
-  desired_count = 1
+  desired_count = var.bootstrap_mode ? 0 : 1
 
   launch_type = "FARGATE"
 
@@ -1490,7 +1490,7 @@ resource "aws_ecs_service" "notes" {
 
   task_definition = aws_ecs_task_definition.notes.arn
 
-  desired_count = 1
+  desired_count = var.bootstrap_mode ? 0 : 1
 
   launch_type = "FARGATE"
 
@@ -1513,7 +1513,7 @@ resource "aws_ecs_service" "render" {
 
   task_definition = aws_ecs_task_definition.render.arn
 
-  desired_count = 1
+  desired_count = var.bootstrap_mode ? 0 : 1
 
   launch_type = "FARGATE"
 

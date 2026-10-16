@@ -89,3 +89,7 @@ _backups/
 crash.log
 infra/staging/build/
 *.tfplan
+
+# Terraform backend/account configuration generated locally
+infra/staging/backend.local.hcl
+infra/staging/.expected-account-id
