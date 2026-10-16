@@ -26,6 +26,17 @@ services:
       service: production-notes-worker
 
 
+  production-quick-summary-worker:
+    extends:
+      file: docker-compose.api.yml
+      service: production-quick-summary-worker
+
+  production-learning-material-worker:
+    extends:
+      file: docker-compose.api.yml
+      service: production-learning-material-worker
+
+
   production-render-worker:
     extends:
       file: docker-compose.api.yml

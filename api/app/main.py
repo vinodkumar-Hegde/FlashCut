@@ -38,6 +38,12 @@ from app.api.render_assets import (
 from app.api.notes import (
     router as notes_router,
 )
+from app.api.quick_summaries import (
+    router as quick_summaries_router,
+)
+from app.api.learning_materials import (
+    router as learning_materials_router,
+)
 from app.core.config import (
     get_settings,
 )
@@ -225,4 +231,12 @@ app.include_router(
 
 app.include_router(
     notes_router
+)
+
+app.include_router(
+    quick_summaries_router
+)
+
+app.include_router(
+    learning_materials_router
 )

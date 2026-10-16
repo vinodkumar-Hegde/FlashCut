@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     bedrock_model_id: str
     summary_algorithm_version: str = "v3.1"
     notes_algorithm_version: str = "v1"
+    quick_summary_algorithm_version: str = "v1"
+    learning_material_algorithm_version: str = "v1"
+    generation_max_attempts: int = 3
+    generation_worker_poll_seconds: float = 1.0
+    generation_stale_after_seconds: int = 1800
 
     render_queue_url: str
     render_profile_version: str = "v2"
