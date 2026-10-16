@@ -79,7 +79,10 @@ services:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/flashcut-home/.aws/credentials
 
     volumes:
-      - ${HOME}/.aws:/tmp/flashcut-home/.aws:ro
+      - ${HOME}/.aws/config:/tmp/flashcut-home/.aws/config:ro
+      - ${HOME}/.aws/credentials:/tmp/flashcut-home/.aws/credentials:ro
+      - ${HOME}/.aws/login/cache:/tmp/flashcut-home/.aws/login/cache
+      - ${HOME}/.aws/sso/cache:/tmp/flashcut-home/.aws/sso/cache
 
     depends_on:
       production-postgres:
@@ -126,7 +129,10 @@ services:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/flashcut-home/.aws/credentials
 
     volumes:
-      - ${HOME}/.aws:/tmp/flashcut-home/.aws:ro
+      - ${HOME}/.aws/config:/tmp/flashcut-home/.aws/config:ro
+      - ${HOME}/.aws/credentials:/tmp/flashcut-home/.aws/credentials:ro
+      - ${HOME}/.aws/login/cache:/tmp/flashcut-home/.aws/login/cache
+      - ${HOME}/.aws/sso/cache:/tmp/flashcut-home/.aws/sso/cache
 
     depends_on:
       production-api:
@@ -168,7 +174,10 @@ services:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/flashcut-home/.aws/credentials
 
     volumes:
-      - ${HOME}/.aws:/tmp/flashcut-home/.aws:ro
+      - ${HOME}/.aws/config:/tmp/flashcut-home/.aws/config:ro
+      - ${HOME}/.aws/credentials:/tmp/flashcut-home/.aws/credentials:ro
+      - ${HOME}/.aws/login/cache:/tmp/flashcut-home/.aws/login/cache
+      - ${HOME}/.aws/sso/cache:/tmp/flashcut-home/.aws/sso/cache
 
     depends_on:
       production-api:
@@ -211,7 +220,10 @@ services:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/flashcut-home/.aws/credentials
 
     volumes:
-      - ${HOME}/.aws:/tmp/flashcut-home/.aws:ro
+      - ${HOME}/.aws/config:/tmp/flashcut-home/.aws/config:ro
+      - ${HOME}/.aws/credentials:/tmp/flashcut-home/.aws/credentials:ro
+      - ${HOME}/.aws/login/cache:/tmp/flashcut-home/.aws/login/cache
+      - ${HOME}/.aws/sso/cache:/tmp/flashcut-home/.aws/sso/cache
 
     depends_on:
       production-api:
@@ -253,7 +265,10 @@ services:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/flashcut-home/.aws/credentials
 
     volumes:
-      - ${HOME}/.aws:/tmp/flashcut-home/.aws:ro
+      - ${HOME}/.aws/config:/tmp/flashcut-home/.aws/config:ro
+      - ${HOME}/.aws/credentials:/tmp/flashcut-home/.aws/credentials:ro
+      - ${HOME}/.aws/login/cache:/tmp/flashcut-home/.aws/login/cache
+      - ${HOME}/.aws/sso/cache:/tmp/flashcut-home/.aws/sso/cache
 
     depends_on:
       production-api:
@@ -295,7 +310,10 @@ services:
       AWS_SHARED_CREDENTIALS_FILE: /tmp/flashcut-home/.aws/credentials
 
     volumes:
-      - ${HOME}/.aws:/tmp/flashcut-home/.aws:ro
+      - ${HOME}/.aws/config:/tmp/flashcut-home/.aws/config:ro
+      - ${HOME}/.aws/credentials:/tmp/flashcut-home/.aws/credentials:ro
+      - ${HOME}/.aws/login/cache:/tmp/flashcut-home/.aws/login/cache
+      - ${HOME}/.aws/sso/cache:/tmp/flashcut-home/.aws/sso/cache
 
     depends_on:
       production-api:
@@ -339,7 +357,10 @@ services:
       LOCAL_OUTPUT_DIR: /data/generated
 
     volumes:
-      - ${HOME}/.aws:/tmp/flashcut-home/.aws:ro
+      - ${HOME}/.aws/config:/tmp/flashcut-home/.aws/config:ro
+      - ${HOME}/.aws/credentials:/tmp/flashcut-home/.aws/credentials:ro
+      - ${HOME}/.aws/login/cache:/tmp/flashcut-home/.aws/login/cache
+      - ${HOME}/.aws/sso/cache:/tmp/flashcut-home/.aws/sso/cache
       - ./var/generated:/data/generated
 
     depends_on:
