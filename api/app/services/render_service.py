@@ -1,3 +1,5 @@
+import hashlib
+import json
 import uuid
 
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +12,9 @@ from app.models.render import (
     RenderOutbox,
 )
 from app.providers.aws import s3_client
+from app.repositories.render_asset_repository import (
+    RenderAssetRepository,
+)
 from app.repositories.render_repository import (
     RenderRepository,
 )
@@ -33,6 +38,12 @@ class RenderService:
             db
         )
 
+        self.asset_repo = (
+            RenderAssetRepository(
+                db
+            )
+        )
+
         self.selection_repo = (
             SelectionRepository(
                 db
@@ -47,9 +58,127 @@ class RenderService:
 
         self.s3 = s3_client()
 
+    def _asset(
+        self,
+        asset_id: str | None,
+        *,
+        kind: str,
+    ):
+        if asset_id is None:
+            return None
+
+        asset = self.asset_repo.get(
+            asset_id
+        )
+
+        if asset is None:
+            raise AppError(
+                404,
+                "RENDER_ASSET_NOT_FOUND",
+                (
+                    f"{kind.capitalize()} "
+                    "asset not found."
+                ),
+            )
+
+        if asset.kind != kind:
+            raise AppError(
+                400,
+                "RENDER_ASSET_KIND_INVALID",
+                (
+                    f"The selected {kind} "
+                    "asset has the wrong type."
+                ),
+            )
+
+        if (
+            asset.status != "ready"
+            or not asset.etag
+        ):
+            raise AppError(
+                409,
+                "RENDER_ASSET_NOT_READY",
+                (
+                    f"The selected {kind} "
+                    "asset is not ready."
+                ),
+            )
+
+        return asset
+
+    @staticmethod
+    def _fingerprint(
+        *,
+        selection_id: str,
+        source_etag: str,
+        profile: str,
+        intro,
+        outro,
+    ) -> str:
+        payload = {
+            "selection_id":
+                selection_id,
+
+            "source_etag":
+                source_etag,
+
+            "render_profile":
+                profile,
+
+            "intro_asset_id":
+                (
+                    intro.id
+                    if intro
+                    else None
+                ),
+
+            "intro_etag":
+                (
+                    intro.etag
+                    if intro
+                    else None
+                ),
+
+            "outro_asset_id":
+                (
+                    outro.id
+                    if outro
+                    else None
+                ),
+
+            "outro_etag":
+                (
+                    outro.etag
+                    if outro
+                    else None
+                ),
+        }
+
+        canonical = json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(
+                ",",
+                ":",
+            ),
+        ).encode(
+            "utf-8"
+        )
+
+        return hashlib.sha256(
+            canonical
+        ).hexdigest()
+
     def create(
         self,
         selection_id: str,
+        *,
+        intro_asset_id: (
+            str | None
+        ) = None,
+        outro_asset_id: (
+            str | None
+        ) = None,
     ):
         selection = (
             self.selection_repo.get(
@@ -91,7 +220,10 @@ class RenderService:
             raise AppError(
                 400,
                 "TOO_MANY_CLIPS",
-                "The selection has too many clips.",
+                (
+                    "The selection has "
+                    "too many clips."
+                ),
             )
 
         selected_seconds = sum(
@@ -142,15 +274,40 @@ class RenderService:
                 ),
             )
 
+        intro = self._asset(
+            intro_asset_id,
+            kind="intro",
+        )
+
+        outro = self._asset(
+            outro_asset_id,
+            kind="outro",
+        )
+
         profile = (
             self.settings
             .render_profile_version
         )
 
+        fingerprint = (
+            self._fingerprint(
+                selection_id=(
+                    selection.id
+                ),
+                source_etag=(
+                    selection.source_etag
+                ),
+                profile=profile,
+                intro=intro,
+                outro=outro,
+            )
+        )
+
         existing = (
             self.repo.find_reusable(
-                selection_id=selection.id,
-                profile=profile,
+                fingerprint=(
+                    fingerprint
+                ),
             )
         )
 
@@ -162,14 +319,43 @@ class RenderService:
             )
 
         job = RenderJob(
-            id=str(uuid.uuid4()),
+            id=str(
+                uuid.uuid4()
+            ),
             video_id=video.id,
-            selection_id=selection.id,
+            selection_id=(
+                selection.id
+            ),
             source_etag=(
                 selection.source_etag
             ),
+            intro_asset_id=(
+                intro.id
+                if intro
+                else None
+            ),
+            intro_asset_etag=(
+                intro.etag
+                if intro
+                else None
+            ),
+            outro_asset_id=(
+                outro.id
+                if outro
+                else None
+            ),
+            outro_asset_etag=(
+                outro.etag
+                if outro
+                else None
+            ),
+            render_fingerprint=(
+                fingerprint
+            ),
             status="queued",
-            render_profile_version=profile,
+            render_profile_version=(
+                profile
+            ),
             selected_seconds=round(
                 selected_seconds,
                 3,
@@ -178,14 +364,21 @@ class RenderService:
         )
 
         outbox = RenderOutbox(
-            id=str(uuid.uuid4()),
+            id=str(
+                uuid.uuid4()
+            ),
             render_id=job.id,
             status="pending",
             attempt_count=0,
         )
 
-        self.db.add(job)
-        self.db.add(outbox)
+        self.db.add(
+            job
+        )
+
+        self.db.add(
+            outbox
+        )
 
         try:
             self.db.commit()
@@ -194,11 +387,11 @@ class RenderService:
             self.db.rollback()
 
             existing = (
-                self.repo.find_reusable(
-                    selection_id=(
-                        selection.id
+                self.repo
+                .find_reusable(
+                    fingerprint=(
+                        fingerprint
                     ),
-                    profile=profile,
                 )
             )
 
@@ -211,7 +404,9 @@ class RenderService:
 
             raise
 
-        self.db.refresh(job)
+        self.db.refresh(
+            job
+        )
 
         return (
             job,

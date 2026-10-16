@@ -25,6 +25,9 @@ from app.providers.aws import (
 from app.repositories.render_repository import (
     RenderRepository,
 )
+from app.repositories.render_asset_repository import (
+    RenderAssetRepository,
+)
 from app.repositories.selection_repository import (
     SelectionRepository,
 )
@@ -449,6 +452,67 @@ def process(
         source_key = video.s3_key
         source_name = video.filename
 
+        asset_repo = (
+            RenderAssetRepository(
+                db
+            )
+        )
+
+        def resolve_asset(
+            asset_id,
+            expected_etag,
+            expected_kind,
+        ):
+            if asset_id is None:
+                return None
+
+            asset = asset_repo.get(
+                asset_id
+            )
+
+            if (
+                asset is None
+                or asset.tenant_id
+                != render.tenant_id
+                or asset.kind
+                != expected_kind
+                or asset.status
+                != "ready"
+                or not asset.etag
+                or asset.etag
+                != expected_etag
+            ):
+                raise RuntimeError(
+                    "Render asset unavailable "
+                    "or changed."
+                )
+
+            return {
+                "id":
+                    asset.id,
+
+                "key":
+                    asset.s3_key,
+
+                "filename":
+                    asset.filename,
+
+                "etag":
+                    asset.etag,
+            }
+
+        intro_asset = resolve_asset(
+            render.intro_asset_id,
+            render.intro_asset_etag,
+            "intro",
+        )
+
+        outro_asset = resolve_asset(
+            render.outro_asset_id,
+            render.outro_asset_etag,
+            "outro",
+        )
+
         clips = list(
             selection.resolved_clips
         )
@@ -473,6 +537,35 @@ def process(
         raise RuntimeError(
             "S3 source changed after approval."
         )
+
+    for asset in (
+        intro_asset,
+        outro_asset,
+    ):
+        if asset is None:
+            continue
+
+        asset_head = s3.head_object(
+            Bucket=settings.s3_bucket,
+            Key=asset["key"],
+        )
+
+        asset_etag = str(
+            asset_head.get(
+                "ETag",
+                "",
+            )
+        ).strip('"')
+
+        if (
+            not asset_etag
+            or asset_etag
+            != asset["etag"]
+        ):
+            raise RuntimeError(
+                "Render asset changed "
+                "after render creation."
+            )
 
     (
         output_filename,
@@ -517,6 +610,34 @@ def process(
             str(source_path),
         )
 
+        intro_path = None
+
+        if intro_asset is not None:
+            intro_path = (
+                tmpdir
+                / "intro.mp4"
+            )
+
+            s3.download_file(
+                settings.s3_bucket,
+                intro_asset["key"],
+                str(intro_path),
+            )
+
+        outro_path = None
+
+        if outro_asset is not None:
+            outro_path = (
+                tmpdir
+                / "outro.mp4"
+            )
+
+            s3.download_file(
+                settings.s3_bucket,
+                outro_asset["key"],
+                str(outro_path),
+            )
+
         render_video(
             source_path=source_path,
             output_path=output_path,
@@ -524,6 +645,12 @@ def process(
             timeout_seconds=(
                 settings
                 .render_ffmpeg_timeout_seconds
+            ),
+            intro_path=intro_path,
+            outro_path=outro_path,
+            max_asset_duration_seconds=(
+                settings
+                .render_asset_max_duration_seconds
             ),
         )
 

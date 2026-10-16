@@ -64,6 +64,41 @@ class RenderJob(Base):
         nullable=False,
     )
 
+    intro_asset_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey(
+            "render_assets.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    intro_asset_etag: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+    )
+
+    outro_asset_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey(
+            "render_assets.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    outro_asset_etag: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+    )
+
+    render_fingerprint: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
     status: Mapped[str] = mapped_column(
         String(32),
         nullable=False,

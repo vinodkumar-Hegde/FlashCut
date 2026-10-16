@@ -33,8 +33,7 @@ class RenderRepository:
     def find_reusable(
         self,
         *,
-        selection_id: str,
-        profile: str,
+        fingerprint: str,
     ) -> RenderJob | None:
         statement = (
             tenant_select(
@@ -42,12 +41,9 @@ class RenderRepository:
                 RenderJob,
             )
             .where(
-                RenderJob.selection_id
-                == selection_id,
-
                 RenderJob
-                .render_profile_version
-                == profile,
+                .render_fingerprint
+                == fingerprint,
 
                 RenderJob.status.in_(
                     [

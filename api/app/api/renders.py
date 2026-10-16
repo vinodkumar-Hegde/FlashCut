@@ -39,6 +39,12 @@ def to_response(
         selection_id=(
             job.selection_id
         ),
+        intro_asset_id=(
+            job.intro_asset_id
+        ),
+        outro_asset_id=(
+            job.outro_asset_id
+        ),
         status=job.status,
         cached=cached,
         selected_seconds=(
@@ -92,7 +98,13 @@ def create_render(
     job, cached = (
         RenderService(db)
         .create(
-            body.selection_id
+            body.selection_id,
+            intro_asset_id=(
+                body.intro_asset_id
+            ),
+            outro_asset_id=(
+                body.outro_asset_id
+            ),
         )
     )
 

@@ -6,11 +6,22 @@ from pydantic import BaseModel
 class CreateRenderRequest(BaseModel):
     selection_id: str
 
+    intro_asset_id: (
+        str | None
+    ) = None
+
+    outro_asset_id: (
+        str | None
+    ) = None
+
 
 class RenderResponse(BaseModel):
     id: str
     video_id: str
     selection_id: str
+
+    intro_asset_id: str | None
+    outro_asset_id: str | None
 
     status: str
     cached: bool

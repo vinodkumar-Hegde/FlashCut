@@ -19,6 +19,7 @@ from app.models.render import (
 )
 from app.models.note import NoteJob
 from app.models.audit import AuditEvent
+from app.models.render_asset import RenderAsset
 
 
 config = context.config

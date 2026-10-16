@@ -40,10 +40,24 @@ async function api(
   }
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       data?.error?.message
       || `Request failed: ${response.status}`
     );
+
+    error.status = response.status;
+    error.code = (
+      data?.error?.code
+      || null
+    );
+
+    error.retryAfter = (
+      response.headers.get(
+        "Retry-After"
+      )
+    );
+
+    throw error;
   }
 
   return data;
@@ -63,7 +77,43 @@ async function waitForJob(
     Date.now() - started
     < timeout
   ) {
-    const job = await api(path);
+    let job = null;
+
+    try {
+      job = await api(path);
+
+    } catch (err) {
+      const temporary = (
+        err?.status === 429
+        || err?.status === 503
+        || err?.code
+           === "RATE_LIMITER_UNAVAILABLE"
+      );
+
+      if (!temporary) {
+        throw err;
+      }
+
+      const retrySeconds = Math.max(
+        1,
+        Number(
+          err?.retryAfter
+          || 1
+        )
+      );
+
+      await new Promise(
+        resolve => setTimeout(
+          resolve,
+          Math.min(
+            retrySeconds * 1000,
+            5000
+          )
+        )
+      );
+
+      continue;
+    }
 
     if (
       job.status === "completed"
@@ -233,6 +283,16 @@ function App() {
   const [
     result,
     setResult
+  ] = useState(null);
+
+  const [
+    introAsset,
+    setIntroAsset
+  ] = useState(null);
+
+  const [
+    outroAsset,
+    setOutroAsset
   ] = useState(null);
 
   const [
@@ -1378,6 +1438,201 @@ function App() {
   }
 
 
+  function removeRenderAsset(
+    asset,
+    setter
+  ) {
+    if (asset?.previewUrl) {
+      URL.revokeObjectURL(
+        asset.previewUrl
+      );
+    }
+
+    setter(null);
+    setRender(null);
+    setResult(null);
+  }
+
+
+  async function uploadRenderAsset(
+    kind,
+    file,
+    setter,
+    existingAsset
+  ) {
+    if (!file) {
+      return;
+    }
+
+    const extension = (
+      file.name
+        .toLowerCase()
+        .split(".")
+        .pop()
+    );
+
+    if (extension !== "mp4") {
+      setError(
+        "Intro and outro videos must be MP4 files."
+      );
+
+      return;
+    }
+
+    const maxBytes = (
+      100 * 1024 * 1024
+    );
+
+    if (
+      file.size <= 0
+      || file.size > maxBytes
+    ) {
+      setError(
+        "Intro and outro videos must be 100 MB or smaller."
+      );
+
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setRender(null);
+    setResult(null);
+
+    try {
+      setActivity(
+        `Preparing ${kind} upload...`
+      );
+
+      const upload = await api(
+        `${API}/render-assets/uploads`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            kind,
+            filename:
+              file.name,
+
+            content_type:
+              "video/mp4",
+
+            size_bytes:
+              file.size
+          })
+        }
+      );
+
+      const form = new FormData();
+
+      for (
+        const [key, value]
+        of Object.entries(
+          upload.upload_fields
+          || {}
+        )
+      ) {
+        form.append(
+          key,
+          value
+        );
+      }
+
+      form.append(
+        "file",
+        file,
+        file.name
+      );
+
+      setActivity(
+        `Uploading ${kind} video...`
+      );
+
+      const response = await fetch(
+        upload.upload_url,
+        {
+          method:
+            upload.upload_method
+            || "POST",
+
+          body:
+            form
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `S3 ${kind} upload failed: `
+          + response.status
+        );
+      }
+
+      setActivity(
+        `Validating ${kind} video...`
+      );
+
+      const completed = await api(
+        (
+          `${API}/render-assets/`
+          + upload.asset_id
+          + "/complete"
+        ),
+        {
+          method: "POST"
+        }
+      );
+
+      if (
+        completed.status
+        !== "ready"
+      ) {
+        throw new Error(
+          `${kind} video is not ready.`
+        );
+      }
+
+      if (
+        existingAsset
+        ?.previewUrl
+      ) {
+        URL.revokeObjectURL(
+          existingAsset.previewUrl
+        );
+      }
+
+      setter({
+        id:
+          completed.id,
+
+        kind:
+          completed.kind,
+
+        filename:
+          completed.filename,
+
+        sizeBytes:
+          completed.size_bytes,
+
+        previewUrl:
+          URL.createObjectURL(
+            file
+          )
+      });
+
+      setActivity("");
+
+    } catch (err) {
+      setError(
+        err.message
+      );
+
+      setActivity("");
+
+    } finally {
+      setBusy(false);
+    }
+  }
+
+
   async function generateVideo() {
     if (!selection) {
       return;
@@ -1398,7 +1653,15 @@ function App() {
           method: "POST",
           body: JSON.stringify({
             selection_id:
-              selection.id
+              selection.id,
+
+            intro_asset_id:
+              introAsset?.id
+              || null,
+
+            outro_asset_id:
+              outroAsset?.id
+              || null
           })
         }
       );
@@ -2782,7 +3045,7 @@ function App() {
 
               <div>
                 <span>
-                  Final duration
+                  Edited duration
                 </span>
 
                 <strong>
@@ -2808,6 +3071,210 @@ function App() {
                 </strong>
               </div>
             </div>
+
+            {!result && (
+              <div className="render-assets-section">
+                <div className="render-assets-heading">
+                  <h2>
+                    Intro and outro
+                  </h2>
+
+                  <p>
+                    Optional MP4 videos.
+                    Each file can be up to
+                    100 MB and 60 seconds.
+                  </p>
+                </div>
+
+                <div className="render-assets-grid">
+                  <div className="render-asset-card">
+                    <div>
+                      <span className="badge">
+                        Optional
+                      </span>
+
+                      <h3>
+                        Intro video
+                      </h3>
+
+                      <p>
+                        Plays before the
+                        edited content.
+                      </p>
+                    </div>
+
+                    {!introAsset && (
+                      <label className="asset-upload">
+                        <span>
+                          Choose intro MP4
+                        </span>
+
+                        <input
+                          type="file"
+                          accept="video/mp4,.mp4"
+                          disabled={busy}
+                          onChange={event => {
+                            const file = (
+                              event
+                                .target
+                                .files?.[0]
+                            );
+
+                            event.target.value =
+                              "";
+
+                            void uploadRenderAsset(
+                              "intro",
+                              file,
+                              setIntroAsset,
+                              introAsset
+                            );
+                          }}
+                        />
+                      </label>
+                    )}
+
+                    {introAsset && (
+                      <div className="asset-ready">
+                        <video
+                          className="asset-preview"
+                          src={
+                            introAsset
+                              .previewUrl
+                          }
+                          controls
+                          preload="metadata"
+                        />
+
+                        <strong>
+                          {
+                            introAsset
+                              .filename
+                          }
+                        </strong>
+
+                        <span>
+                          {(
+                            introAsset
+                              .sizeBytes
+                            / 1024
+                            / 1024
+                          ).toFixed(2)}
+                          {" MB"}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() =>
+                            removeRenderAsset(
+                              introAsset,
+                              setIntroAsset
+                            )
+                          }
+                        >
+                          Remove intro
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="render-asset-card">
+                    <div>
+                      <span className="badge">
+                        Optional
+                      </span>
+
+                      <h3>
+                        Outro video
+                      </h3>
+
+                      <p>
+                        Plays after the
+                        edited content.
+                      </p>
+                    </div>
+
+                    {!outroAsset && (
+                      <label className="asset-upload">
+                        <span>
+                          Choose outro MP4
+                        </span>
+
+                        <input
+                          type="file"
+                          accept="video/mp4,.mp4"
+                          disabled={busy}
+                          onChange={event => {
+                            const file = (
+                              event
+                                .target
+                                .files?.[0]
+                            );
+
+                            event.target.value =
+                              "";
+
+                            void uploadRenderAsset(
+                              "outro",
+                              file,
+                              setOutroAsset,
+                              outroAsset
+                            );
+                          }}
+                        />
+                      </label>
+                    )}
+
+                    {outroAsset && (
+                      <div className="asset-ready">
+                        <video
+                          className="asset-preview"
+                          src={
+                            outroAsset
+                              .previewUrl
+                          }
+                          controls
+                          preload="metadata"
+                        />
+
+                        <strong>
+                          {
+                            outroAsset
+                              .filename
+                          }
+                        </strong>
+
+                        <span>
+                          {(
+                            outroAsset
+                              .sizeBytes
+                            / 1024
+                            / 1024
+                          ).toFixed(2)}
+                          {" MB"}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() =>
+                            removeRenderAsset(
+                              outroAsset,
+                              setOutroAsset
+                            )
+                          }
+                        >
+                          Remove outro
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {!result && (
               <button
@@ -2878,6 +3345,29 @@ function App() {
                   setSelection(null);
                   setRender(null);
                   setResult(null);
+
+                  if (
+                    introAsset
+                      ?.previewUrl
+                  ) {
+                    URL.revokeObjectURL(
+                      introAsset
+                        .previewUrl
+                    );
+                  }
+
+                  if (
+                    outroAsset
+                      ?.previewUrl
+                  ) {
+                    URL.revokeObjectURL(
+                      outroAsset
+                        .previewUrl
+                    );
+                  }
+
+                  setIntroAsset(null);
+                  setOutroAsset(null);
                   setSelectedIds([]);
                   setWordRanges([]);
                   setSavedWordRanges([]);

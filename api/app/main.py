@@ -32,6 +32,9 @@ from app.api.selections import (
 from app.api.renders import (
     router as renders_router,
 )
+from app.api.render_assets import (
+    router as render_assets_router,
+)
 from app.api.notes import (
     router as notes_router,
 )
@@ -214,6 +217,10 @@ app.include_router(
 
 app.include_router(
     renders_router
+)
+
+app.include_router(
+    render_assets_router
 )
 
 app.include_router(

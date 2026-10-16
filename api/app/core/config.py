@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     s3_tenant_prefix_template: str | None = None
     s3_output_prefix: str = "generated/"
     s3_transcript_prefix: str = "transcripts/"
+    s3_render_asset_prefix: str = "render-assets/"
 
     database_url: str
 
@@ -35,11 +36,15 @@ class Settings(BaseSettings):
     notes_algorithm_version: str = "v1"
 
     render_queue_url: str
-    render_profile_version: str = "v1"
+    render_profile_version: str = "v2"
     render_presign_seconds: int = 900
     render_max_clips: int = 500
     render_max_total_seconds: int = 7200
     render_ffmpeg_timeout_seconds: int = 3600
+
+    render_asset_upload_presign_seconds: int = 900
+    render_asset_max_bytes: int = 104_857_600
+    render_asset_max_duration_seconds: int = 60
 
     render_visibility_timeout_seconds: int = 300
     render_heartbeat_interval_seconds: int = 60
@@ -186,6 +191,7 @@ class Settings(BaseSettings):
         "s3_video_prefix",
         "s3_output_prefix",
         "s3_transcript_prefix",
+        "s3_render_asset_prefix",
     )
     @classmethod
     def normalize_prefix(cls, value: str) -> str:

@@ -429,11 +429,11 @@ def test_alembic():
     )
 
     require(
-        "0011"
+        "0012"
         in out,
         (
             "Expected migration "
-            "0011 head."
+            "0012 head."
         ),
     )
 
