@@ -36,9 +36,18 @@ class Settings(BaseSettings):
     notes_algorithm_version: str = "v1"
     quick_summary_algorithm_version: str = "v1"
     learning_material_algorithm_version: str = "v1"
+
+    quick_summary_queue_url: str
+    learning_material_queue_url: str
+
+    generation_visibility_timeout_seconds: int = 300
+    generation_heartbeat_interval_seconds: int = 60
+    generation_queue_publish_max_attempts: int = 20
+    generation_dispatch_poll_seconds: float = 0.5
+    generation_outbox_batch_size: int = 20
     generation_max_attempts: int = 3
     generation_worker_poll_seconds: float = 1.0
-    generation_stale_after_seconds: int = 1800
+    generation_stale_after_seconds: int = 180
 
     render_queue_url: str
     render_profile_version: str = "v2"

@@ -26,6 +26,11 @@ services:
       service: production-notes-worker
 
 
+  production-generation-dispatcher:
+    extends:
+      file: docker-compose.api.yml
+      service: production-generation-dispatcher
+
   production-quick-summary-worker:
     extends:
       file: docker-compose.api.yml

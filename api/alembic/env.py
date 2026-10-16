@@ -22,7 +22,9 @@ from app.models.audit import AuditEvent
 from app.models.render_asset import RenderAsset
 from app.models.learning_pipeline import (
     QuickSummaryJob,
+    QuickSummaryOutbox,
     LearningMaterialJob,
+    LearningMaterialOutbox,
 )
 
 

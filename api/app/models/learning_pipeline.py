@@ -430,3 +430,157 @@ class LearningMaterialJob(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+
+
+class QuickSummaryOutbox(Base):
+    __tablename__ = (
+        "quick_summary_outbox"
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(
+            uuid.uuid4()
+        ),
+    )
+
+    job_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey(
+            "quick_summary_jobs.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        unique=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="pending",
+    )
+
+    attempt_count: Mapped[int] = (
+        mapped_column(
+            Integer,
+            nullable=False,
+            default=0,
+        )
+    )
+
+    next_attempt_at: Mapped[
+        datetime | None
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=utcnow,
+    )
+
+    last_error: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[
+        datetime
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+    )
+
+    updated_at: Mapped[
+        datetime
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+    sent_at: Mapped[
+        datetime | None
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+
+class LearningMaterialOutbox(Base):
+    __tablename__ = (
+        "learning_material_outbox"
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(
+            uuid.uuid4()
+        ),
+    )
+
+    job_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey(
+            "learning_material_jobs.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        unique=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="pending",
+    )
+
+    attempt_count: Mapped[int] = (
+        mapped_column(
+            Integer,
+            nullable=False,
+            default=0,
+        )
+    )
+
+    next_attempt_at: Mapped[
+        datetime | None
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=utcnow,
+    )
+
+    last_error: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[
+        datetime
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+    )
+
+    updated_at: Mapped[
+        datetime
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+    sent_at: Mapped[
+        datetime | None
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )

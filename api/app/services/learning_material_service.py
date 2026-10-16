@@ -22,6 +22,7 @@ from app.core.idempotency import (
 )
 from app.models.learning_pipeline import (
     LearningMaterialJob,
+    LearningMaterialOutbox,
 )
 from app.repositories.generation_repository import (
     LearningMaterialRepository,
@@ -310,6 +311,16 @@ class LearningMaterialService:
         )
 
         self.db.add(job)
+
+        self.db.add(
+            LearningMaterialOutbox(
+                job_id=job.id,
+                status="pending",
+                next_attempt_at=(
+                    utcnow()
+                ),
+            )
+        )
 
         try:
             self.db.commit()
@@ -606,6 +617,10 @@ class LearningMaterialService:
     def mark_failure(
         self,
         job_id: str,
+        *,
+        prior_attempt_count: (
+            int | None
+        ) = None,
     ):
         job = self.repo.get(
             job_id
@@ -615,6 +630,17 @@ class LearningMaterialService:
             return
 
         job.heartbeat_at = utcnow()
+
+        if (
+            prior_attempt_count
+            is not None
+            and job.attempt_count
+            <= prior_attempt_count
+        ):
+            job.attempt_count = (
+                prior_attempt_count
+                + 1
+            )
 
         if (
             job.attempt_count

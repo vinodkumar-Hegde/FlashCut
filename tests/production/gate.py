@@ -393,6 +393,24 @@ def test_containers():
         "Redis container missing.",
     )
 
+    require(
+        "flashcut-generation-dispatcher"
+        in out,
+        "Generation dispatcher missing.",
+    )
+
+    require(
+        "flashcut-quick-summary-worker"
+        in out,
+        "Quick Summary worker missing.",
+    )
+
+    require(
+        "flashcut-learning-material-worker"
+        in out,
+        "Learning Material worker missing.",
+    )
+
 
 def test_redis():
     code, out, err = shell(
@@ -429,11 +447,11 @@ def test_alembic():
     )
 
     require(
-        "0013"
+        "0014"
         in out,
         (
             "Expected migration "
-            "0013 head."
+            "0014 head."
         ),
     )
 
