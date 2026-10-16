@@ -79,3 +79,13 @@ _backups/
 *.save
 *.tmp
 *.temp
+
+# Terraform local state and generated staging artifacts
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+infra/staging/build/
+*.tfplan
