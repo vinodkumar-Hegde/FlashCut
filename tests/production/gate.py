@@ -39,7 +39,7 @@ MODE = (
 LOCAL_BUCKET = (
     os.getenv(
         "PRODUCTION_GATE_BUCKET",
-        "transcript-video-prototype-dev",
+        "",
     )
     .strip()
 )
@@ -47,7 +47,7 @@ LOCAL_BUCKET = (
 LOCAL_VIDEO_KEY = (
     os.getenv(
         "PRODUCTION_GATE_VIDEO_KEY",
-        "videos/Ortho-Demo.mp4",
+        "",
     )
     .strip()
 )
@@ -2063,6 +2063,18 @@ def main():
             "be local or production."
         )
 
+        return 2
+
+    if not LOCAL_BUCKET:
+        print(
+            "PRODUCTION_GATE_BUCKET is required."
+        )
+        return 2
+
+    if not LOCAL_VIDEO_KEY:
+        print(
+            "PRODUCTION_GATE_VIDEO_KEY is required."
+        )
         return 2
 
     run_local_tests()

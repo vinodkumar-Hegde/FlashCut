@@ -93,3 +93,19 @@ infra/staging/build/
 # Terraform backend/account configuration generated locally
 infra/staging/backend.local.hcl
 infra/staging/.expected-account-id
+
+# Node dependencies
+node_modules/
+
+# Coverage / automated test artifacts
+.coverage
+coverage.xml
+htmlcov/
+junit.xml
+test-results/
+
+# Local cryptographic material
+*.pem
+*.key
+*.p12
+*.pfx

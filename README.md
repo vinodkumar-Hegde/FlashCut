@@ -14,21 +14,27 @@ web/
 Independent DT-FlashCut browser application.
 It communicates with the backend through the public /api/v1 contract.
 
-legacy/
-Temporary copy of the original Flask prototype.
-It is retained during migration only.
+## Production workflows
 
-## Production workflow
+Video editing:
+S3 video -> transcript -> editing summary -> approved selection
+-> SQS render job -> FFmpeg worker -> generated S3 video.
 
-S3 video
--> Amazon Transcribe
--> transcript
--> Automatic Summary
--> user review
--> approved selection
--> SQS render job
--> FFmpeg render worker
--> generated S3 video
+Quick Summary:
+video -> Quick Summary job -> transactional outbox
+-> dedicated SQS queue -> dedicated worker -> result.
+
+Learning Materials:
+video -> Learning Materials job -> transactional outbox
+-> dedicated SQS queue -> dedicated worker
+-> Notes / Mind Map / Flow Chart / PDF.
+
+## Source-video integration
+
+Integrating systems map Course / Subject / Topic to an approved
+S3 bucket and object key and call `/api/v1/videos/resolve`.
+Downstream APIs use the returned DT-FlashCut `video_id`.
+Arbitrary public or presigned URLs are not trusted render inputs.
 
 ## API-only local stack
 

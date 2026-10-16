@@ -4,11 +4,16 @@ set -uo pipefail
 
 export AWS_PAGER=""
 
-PROFILE="${AWS_PROFILE:-dev}"
-REGION="${AWS_REGION:-ap-south-1}"
+: "${AWS_PROFILE:?AWS_PROFILE must be set explicitly}"
+: "${AWS_REGION:?AWS_REGION must be set explicitly}"
+: "${STAGING_SOURCE_BUCKET:?STAGING_SOURCE_BUCKET must be set explicitly}"
+: "${STAGING_SOURCE_KEY:?STAGING_SOURCE_KEY must be set explicitly}"
 
-SOURCE_BUCKET="${STAGING_SOURCE_BUCKET:-transcript-video-prototype-dev}"
-SOURCE_KEY="${STAGING_SOURCE_KEY:-videos/Ortho-Demo.mp4}"
+PROFILE="$AWS_PROFILE"
+REGION="$AWS_REGION"
+
+SOURCE_BUCKET="$STAGING_SOURCE_BUCKET"
+SOURCE_KEY="$STAGING_SOURCE_KEY"
 
 TMP_DIR="$(
   mktemp -d

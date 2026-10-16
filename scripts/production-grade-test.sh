@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -uo pipefail
+set -euo pipefail
 
 cd "$(
   git rev-parse --show-toplevel
@@ -8,7 +8,19 @@ cd "$(
 
 export PYTHONUNBUFFERED=1
 
-python3 \
-  tests/production/gate.py
+if [[ -f .env ]]; then
+  while IFS='=' read -r key value
+  do
+    value="${value%$'\r'}"
 
-exit $?
+    case "$key" in
+      PRODUCTION_GATE_BUCKET|PRODUCTION_GATE_VIDEO_KEY)
+        if [[ -z "${!key:-}" ]]; then
+          export "$key=$value"
+        fi
+        ;;
+    esac
+  done < .env
+fi
+
+exec python3   tests/production/gate.py

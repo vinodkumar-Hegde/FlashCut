@@ -6,8 +6,11 @@ ROOT="$(
   git rev-parse --show-toplevel
 )"
 
-PROFILE="${AWS_PROFILE:-dev}"
-REGION="${AWS_REGION:-ap-south-1}"
+: "${AWS_PROFILE:?AWS_PROFILE must be set explicitly}"
+: "${AWS_REGION:?AWS_REGION must be set explicitly}"
+
+PROFILE="$AWS_PROFILE"
+REGION="$AWS_REGION"
 
 ACCOUNT_FILE="$ROOT/infra/staging/.expected-account-id"
 
@@ -56,5 +59,6 @@ exec docker run \
   -e "AWS_DEFAULT_REGION=$REGION" \
   -e "AWS_SDK_LOAD_CONFIG=1" \
   -e "TF_VAR_expected_aws_account_id=$EXPECTED_ACCOUNT" \
+  -e "TF_VAR_aws_region=$REGION" \
   hashicorp/terraform:1.16.5 \
   "$@"

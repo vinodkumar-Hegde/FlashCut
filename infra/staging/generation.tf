@@ -838,7 +838,9 @@ resource "aws_appautoscaling_target" "quick_summary" {
   min_capacity = var.bootstrap_mode ? 0 : var.quick_summary_worker_min_count
 
   max_capacity = (
-    var.quick_summary_worker_max_count
+    var.bootstrap_mode
+    ? 0
+    : var.quick_summary_worker_max_count
   )
 }
 
@@ -855,7 +857,9 @@ resource "aws_appautoscaling_target" "learning_material" {
   min_capacity = var.bootstrap_mode ? 0 : var.learning_material_worker_min_count
 
   max_capacity = (
-    var.learning_material_worker_max_count
+    var.bootstrap_mode
+    ? 0
+    : var.learning_material_worker_max_count
   )
 }
 

@@ -967,6 +967,8 @@ resource "aws_cloudfront_distribution" "api" {
 
   comment = "DT-FlashCut staging API"
 
+  aliases = var.cloudfront_aliases
+
   origin {
     domain_name = aws_lb.api.dns_name
 
@@ -1016,9 +1018,43 @@ resource "aws_cloudfront_distribution" "api" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = (
+      var.cloudfront_acm_certificate_arn == null
+    )
 
-    minimum_protocol_version = "TLSv1.2_2021"
+    acm_certificate_arn = (
+      var.cloudfront_acm_certificate_arn
+    )
+
+    ssl_support_method = (
+      var.cloudfront_acm_certificate_arn == null
+      ? null
+      : "sni-only"
+    )
+
+    minimum_protocol_version = (
+      var.cloudfront_acm_certificate_arn == null
+      ? "TLSv1"
+      : "TLSv1.2_2021"
+    )
+  }
+
+  lifecycle {
+    precondition {
+      condition = (
+        (
+          var.cloudfront_acm_certificate_arn == null
+          && length(var.cloudfront_aliases) == 0
+        )
+        ||
+        (
+          var.cloudfront_acm_certificate_arn != null
+          && length(var.cloudfront_aliases) > 0
+        )
+      )
+
+      error_message = "CloudFront custom aliases and the ACM certificate must be configured together."
+    }
   }
 
   price_class = "PriceClass_200"

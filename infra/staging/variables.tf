@@ -1,6 +1,13 @@
 variable "aws_region" {
-  type    = string
-  default = "ap-south-1"
+  type = string
+
+  validation {
+    condition = length(
+      trimspace(var.aws_region)
+    ) > 0
+
+    error_message = "aws_region must be supplied explicitly."
+  }
 }
 
 variable "image_tag" {
@@ -45,4 +52,32 @@ variable "bootstrap_mode" {
   type        = bool
   default     = true
   description = "Keep all ECS services at zero until images and database migrations are ready."
+}
+
+
+variable "cloudfront_aliases" {
+  type        = list(string)
+  default     = []
+  description = "Optional custom DNS aliases for the CloudFront distribution."
+}
+
+variable "cloudfront_acm_certificate_arn" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional ACM certificate ARN from us-east-1 for custom CloudFront aliases."
+
+  validation {
+    condition = (
+      var.cloudfront_acm_certificate_arn == null
+      || can(
+        regex(
+          "^arn:aws:acm:us-east-1:[0-9]{12}:certificate/.+$",
+          var.cloudfront_acm_certificate_arn,
+        )
+      )
+    )
+
+    error_message = "cloudfront_acm_certificate_arn must be a valid us-east-1 ACM certificate ARN."
+  }
 }

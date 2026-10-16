@@ -6,8 +6,11 @@ ROOT="$(
   git rev-parse --show-toplevel
 )"
 
-PROFILE="${AWS_PROFILE:-dev}"
-REGION="${AWS_REGION:-ap-south-1}"
+: "${AWS_PROFILE:?AWS_PROFILE must be set explicitly}"
+: "${AWS_REGION:?AWS_REGION must be set explicitly}"
+
+PROFILE="$AWS_PROFILE"
+REGION="$AWS_REGION"
 
 STAGING_DIR="$ROOT/infra/staging"
 
